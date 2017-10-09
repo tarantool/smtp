@@ -1,5 +1,5 @@
 -- name of the package to be published
-package = 'ckit'
+package = 'smtp'
 
 -- version of the package; it's mandatory, but we don't use it in Tarantool;
 -- instead, provide below a specific branch in the package's repository at
@@ -8,20 +8,19 @@ version = 'scm-1'
 
 -- url and branch of the package's repository at GitHub
 source  = {
-    url    = 'git://github.com/tarantool/modulekit.git';
-    branch = 'ckit';
+    url    = 'git://github.com/tarantool/smtp.git';
+    branch = 'master';
 }
 
 -- general information about the package;
 -- for a Tarantool package, we require three fields (summary, homepage, license)
 -- and more package information is always welcome
 description = {
-    summary  = "C module template for Tarantool";
+    summary  = "SMTP client module for Tarantool";
     detailed = [[
-    A ready-to-use C module template.
-    Clone and modify it to create new modules.
+    A smtp module to send email via smtp servers.
     ]];
-    homepage = 'https://github.com/tarantool/modulekit.git';
+    homepage = 'https://github.com/tarantool/smtp.git';
     maintainer = "Roman Tsisyk <roman@tarantool.org>";
     license  = 'BSD2';
 }
