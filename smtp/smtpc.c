@@ -269,14 +269,15 @@ smtpc_execute(struct smtpc_request *req, double timeout)
 		++env->stat.failed_requests;
 		smtpc_request_delete(req);
 		return -1;
-	default:
+	default: {
+		char error_msg[256];
 		curl_easy_getinfo(req->easy, CURLINFO_OS_ERRNO, &longval);
-		errno = longval ? longval : EINVAL;
-		box_error_set(__FILE__, __LINE__, ER_UNKNOWN,
-			      "Curl internal issue");
+		snprintf(error_msg, sizeof(error_msg), "SMTP error %i (os errno %li)", req->code, longval);
+		box_error_set(__FILE__, __LINE__, ER_UNKNOWN, error_msg);
 		++env->stat.failed_requests;
 		smtpc_request_delete(req);
 		return -1;
+	}
 	}
 
 	return 0;
