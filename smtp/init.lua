@@ -75,7 +75,11 @@ end
 --  options - this is a table of options.
 --      cc      - a list to send email copy;
 --
+--      bcc     - a list to send a hidden copy;
+--
 --      subject - a subject for the email;
+--
+--      headers - a list of header;
 --
 --      ca_path - a path to ssl certificate dir;
 --
@@ -132,9 +136,13 @@ curl_mt = {
             end
             local header = ''
             local recipients = {}
-            header = 'TO: ' .. add_recipients(recipients, to) .. '\r\n' ..
-                     'CC: ' .. add_recipients(recipients, opts.cc) .. '\r\n' 
+            header = 'FROM: ' .. from .. 'r\n' ..
+                     'TO: ' .. add_recipients(recipients, to) .. '\r\n'
+            if opts.cc then
+                header = header .. 'CC: ' .. add_recipients(recipients, opts.cc) .. '\r\n'
+            end
             add_recipients(recipients, opts.bcc)
+            header = header .. table.concat(opts.headers or {}, '\r\n')
             if opts.subject then
                 header = header .. 'SUBJECT: ' .. opts.subject .. '\r\n'
             end
