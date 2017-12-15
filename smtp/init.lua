@@ -136,15 +136,17 @@ curl_mt = {
             end
             local header = ''
             local recipients = {}
-            header = 'FROM: ' .. from .. 'r\n' ..
-                     'TO: ' .. add_recipients(recipients, to) .. '\r\n'
+            header = 'From: ' .. from .. '\r\n' ..
+                     'To: ' .. add_recipients(recipients, to) .. '\r\n'
             if opts.cc then
-                header = header .. 'CC: ' .. add_recipients(recipients, opts.cc) .. '\r\n'
+                header = header .. 'Cc: ' .. add_recipients(recipients, opts.cc) .. '\r\n'
             end
             add_recipients(recipients, opts.bcc)
-            header = header .. table.concat(opts.headers or {}, '\r\n')
+            if opts.headers and #opts.headers > 0 then
+                header = header .. table.concat(opts.headers, '\r\n') .. '\r\n'
+            end
             if opts.subject then
-                header = header .. 'SUBJECT: ' .. opts.subject .. '\r\n'
+                header = header .. 'Subject: ' .. opts.subject .. '\r\n'
             end
 
             body = header .. '\r\n' .. body
