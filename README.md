@@ -23,7 +23,7 @@ Curl library
 ```lua
 local client = require('smtp').new()
 r = client:request(addr, 'sender@tarantool.org',
-                   'reciever@tarantool.org',
+                   'receiver@tarantool.org',
                    'mail.body',
                    {cc = 'cc@tarantool.org',
                     timeout = 2})

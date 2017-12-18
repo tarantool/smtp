@@ -61,19 +61,19 @@ test:test("smtp.client", function(test)
     local m
 
     r = client:request(addr, 'sender@tarantool.org',
-                       'reciever@tarantool.org',
+                       'receiver@tarantool.org',
                        'mail.body')
     test:is(r.status, 250, 'simple mail')
     m = mails:get()
     test:is(m.from, '<sender@tarantool.org>', 'sender')
-    test:is_deeply(m.rcpt, {'<reciever@tarantool.org>'}, 'rcpt')
+    test:is_deeply(m.rcpt, {'<receiver@tarantool.org>'}, 'rcpt')
 
     r = client:request(addr, 'sender@tarantool.org',
-                       'reciever@tarantool.org',
+                       'receiver@tarantool.org',
                        'mail.body',
                        {cc = 'cc@tarantool.org'})
     m = mails:get()
-    test:is_deeply(m.rcpt, {'<reciever@tarantool.org>', '<cc@tarantool.org>'}, 'cc rcpt')
+    test:is_deeply(m.rcpt, {'<receiver@tarantool.org>', '<cc@tarantool.org>'}, 'cc rcpt')
 
     r = client:request(addr, 'sender@tarantool.org',
                        nil,

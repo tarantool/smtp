@@ -1,4 +1,4 @@
-#ifndef TARNATOOL_SMTPC_H_INCLUDED
+#ifndef TARANTOOL_SMTPC_H_INCLUDED
 #define TARANTOOL_SMTPC_H_INCLUDED 1
 /*
  * Copyright 2010-2017, Tarantool AUTHORS, please see AUTHORS file.
