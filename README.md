@@ -178,10 +178,10 @@ If you cloned and built the library from source, add the library path to
 `package.cpath`, for example:
 
 ```lua
-   -- for Ubuntu
-   package.cpath = package.cpath .. './smtp/?.so;'
-   -- for Mac OS
-   package.cpath = package.cpath .. './smtp/?.dylib;'
+-- for Ubuntu
+package.cpath = package.cpath .. './smtp/?.so;'
+-- for Mac OS
+package.cpath = package.cpath .. './smtp/?.dylib;'
 ```
 
 Execute these requests:
