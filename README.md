@@ -42,7 +42,7 @@ You will need:
 You have two ways to install `tarantool/smtp`:
 
 1. The first way is to
-   [use the Tarantool Lua rocks repository](https://tarantool.org/en/doc/1.7/book/app_server/installing_module.html#installing-a-module-from-a-repository)).
+   [use the Tarantool Lua rocks repository](https://tarantool.org/en/doc/1.7/book/app_server/installing_module.html#installing-a-module-from-a-repository).
 
    With Tarantool 1.7.4+, say:
 
