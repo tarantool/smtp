@@ -168,8 +168,23 @@ quickly.
 
 ## OK, run it
 
-Start Tarantool, run as a console. Execute these requests (you can use
-copy-and-paste):
+Start Tarantool, run as a console:
+
+```bash
+tarantool
+```
+
+If you cloned and built the library from source, add the library path to
+`package.cpath`, for example:
+
+```lua
+   -- for Ubuntu
+   package.cpath = package.cpath .. './smtp/?.so;'
+   -- for Mac OS
+   package.cpath = package.cpath .. './smtp/?.dylib;'
+```
+
+Execute these requests:
 
 ```lua
 -- STARTUP
@@ -179,7 +194,9 @@ box.cfg{}
 fiber = require('fiber')
 socket = require('socket')
 mails = fiber.channel(100)
+```
 
+```lua
 -- SERVER CODE
 
 function smtp_h(s)
@@ -208,8 +225,7 @@ print(' RCPT TO')
              s:write('250 OK\r\n')
          elseif l == 'DATA\r\n' then
 print(' DATA')
-             s:write('354 Enter message, ending with "." on a line by
-itself\r\n')
+             s:write('354 Enter message, ending with "." on a line by itself\r\n')
              while true do
                  local l = s:read('\r\n')
 print(' DATA: ' .. l)
@@ -235,7 +251,9 @@ end
 
 server = socket.tcp_server('127.0.0.1', 0, smtp_h)
 addr = 'smtp://127.0.0.1:' .. server:name().port
+```
 
+```lua
 -- TARANTOOL/SMTP REQUEST CODE
 
 client = require('smtp').new()
