@@ -41,20 +41,32 @@ You will need:
 
 You have two ways to install `tarantool/smtp`:
 
-1. The first way is to use the Tarantool Lua rock repository directly.
-   For example, with Tarantool 1.6, you should set up Lua rocks
-   (see the description in the
-   [Tarantool manual](https://tarantool.org/doc/1.7/book/app_server/installing_module.html))
-   and then say:
+1. The first way is to
+   [use the Tarantool Lua rocks repository](https://tarantool.org/en/doc/1.7/book/app_server/installing_module.html#installing-a-module-from-a-repository)).
+
+   With Tarantool 1.7.4+, say:
+
+   ```
+   tarantoolctl rocks install smtp
+   ```
+
+   With earlier Tarantool versions, set up Lua rocks and then say:
 
    ```
    luarocks --local install smtp
    ```
 
 2. The second way is to clone from https://github.com/tarantool/smtp, build,
-   and use the library that the build produces.
+   and use the produced library:
 
-Whatever way you choose, it is still a good idea to look at the files in the
+   ```bash
+   clone https://github.com/tarantool/smtp.git smtp
+   cd smtp
+   cmake . && make
+   # and use the library as shown in "Ok, run it" section below
+   ```
+
+Whichever way you choose, it is still a good idea to look at the files in the
 github.com/tarantool/smtp repository.
 There are example files and commented test files, which will aid you in
 understanding how `tarantool/smtp` was put together.
