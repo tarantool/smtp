@@ -60,7 +60,7 @@ You have two ways to install `tarantool/smtp`:
    and use the produced library:
 
    ```bash
-   clone https://github.com/tarantool/smtp.git smtp
+   git clone https://github.com/tarantool/smtp.git smtp
    cd smtp
    cmake . && make
    # and use the library as shown in "Ok, run it" section below
