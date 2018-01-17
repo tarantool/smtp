@@ -123,6 +123,15 @@ local function add_recipients(list, recipients)
     return table.concat(recipients, ', ')
 end
 
+-- TODO: parse according to [3.4. Address Specification][1], correctly
+-- distinguish name-addr and addr-spec cases, handle group case, mailbox-list
+-- and address-list cases.
+--
+-- [1]: https://tools.ietf.org/html/rfc2822#section-3.4
+local function addr_spec(mailbox)
+    return mailbox:match('^.*[ \t]*<(.-)>[ \t]*$') or mailbox
+end
+
 curl_mt = {
     __index = {
         --
@@ -150,7 +159,12 @@ curl_mt = {
             end
 
             body = header .. '\r\n' .. body
-            local resp = self.curl:request(url, from, recipients, body, opts or {})
+            local from_addr = addr_spec(from)
+            local recipients_addr = {}
+            for _, recipient in ipairs(recipients) do
+                recipients_addr[#recipients_addr + 1] = addr_spec(recipient)
+            end
+            local resp = self.curl:request(url, from_addr, recipients_addr, body, opts or {})
             return resp
         end,
 
