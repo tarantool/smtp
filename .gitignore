@@ -24,3 +24,6 @@ VERSION
 CTestTestfile.cmake
 Testing
 CTestTestfile.cmake
+
+# Vim Swap files
+.*.sw[a-z]
