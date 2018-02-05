@@ -154,6 +154,11 @@ curl_mt = {
             if opts.headers and #opts.headers > 0 then
                 header = header .. table.concat(opts.headers, '\r\n') .. '\r\n'
             end
+
+            local content_type = opts.content_type or 'text/plain'
+            local charset = opts.charset or 'UTF-8'
+            header = header .. 'Content-Type: ' .. content_type .. '; charset=' .. charset .. '\r\n'
+
             if opts.subject then
                 header = header .. 'Subject: ' .. opts.subject .. '\r\n'
             end
