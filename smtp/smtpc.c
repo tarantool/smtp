@@ -171,6 +171,12 @@ smtpc_set_ssl_cert(struct smtpc_request *req, const char *ssl_cert)
 }
 
 void
+smtpc_set_use_ssl(struct smtpc_request *req, long use_ssl)
+{
+	curl_easy_setopt(req->easy, CURLOPT_USE_SSL, use_ssl);
+}
+
+void
 smtpc_set_username(struct smtpc_request *req, const char *username)
 {
 	curl_easy_setopt(req->easy, CURLOPT_USERNAME, username);
