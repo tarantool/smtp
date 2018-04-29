@@ -166,7 +166,7 @@ smtpc_set_ca_path(struct smtpc_request *req, const char *ca_path);
  * @param ca_file - File holding one or more certificates
  * to verify the peer with. The application does not have to keep the string
  * around after setting this option.
- * @see smtps://curl.haxx.se/libcurl/c/CURLOPT_CAINFO.html
+ * @see https://curl.haxx.se/libcurl/c/CURLOPT_CAINFO.html
  */
 void
 smtpc_set_ca_file(struct smtpc_request *req, const char *ca_file);
@@ -175,7 +175,7 @@ smtpc_set_ca_file(struct smtpc_request *req, const char *ca_file);
  * Enables/disables verification of the certificate's name (CN) against host
  * @param req request
  * @param verify flag
- * @see smtps://curl.haxx.se/libcurl/c/CURLOPT_SSL_VERIFYHOST.html
+ * @see https://curl.haxx.se/libcurl/c/CURLOPT_SSL_VERIFYHOST.html
  */
 void
 smtpc_set_verify_host(struct smtpc_request *req, long verify);
@@ -184,7 +184,7 @@ smtpc_set_verify_host(struct smtpc_request *req, long verify);
  * Enables/disables verification of the peer's SSL certificate
  * @param req request
  * @param verify flag
- * @see smtps://curl.haxx.se/libcurl/c/CURLOPT_SSL_VERIFYPEER.html
+ * @see https://curl.haxx.se/libcurl/c/CURLOPT_SSL_VERIFYPEER.html
  */
 void
 smtpc_set_verify_peer(struct smtpc_request *req, long verify);
@@ -194,7 +194,7 @@ smtpc_set_verify_peer(struct smtpc_request *req, long verify);
  * @param req request
  * @param ssl_key - path to the private key. The application does not have to
  * keep the string around after setting this option.
- * @see smtps://curl.haxx.se/libcurl/c/CURLOPT_SSLKEY.html
+ * @see https://curl.haxx.se/libcurl/c/CURLOPT_SSLKEY.html
  */
 void
 smtpc_set_ssl_key(struct smtpc_request *req, const char *ssl_key);
@@ -204,10 +204,25 @@ smtpc_set_ssl_key(struct smtpc_request *req, const char *ssl_key);
  * @param req request
  * @param ssl_cert - path to the client certificate. The application does not
  * have to keep the string around after setting this option.
- * @see smtps://curl.haxx.se/libcurl/c/CURLOPT_SSLCERT.html
+ * @see https://curl.haxx.se/libcurl/c/CURLOPT_SSLCERT.html
  */
 void
 smtpc_set_ssl_cert(struct smtpc_request *req, const char *ssl_cert);
+
+/**
+ * Request using SSL/TLS. STARTTLS is used as preferable / as mandatory
+ * depending of this option is case when a connection uses plain text
+ * initially. Typically plain text / STARTTLS (explicit TLS) used on 587 port
+ * and SMTPS (implicit TLS) on 487 port.
+ * @param req request
+ * @param use_ssl - whether SSL / TLS is preferable / mandatory:
+ * * 0: CURLUSESSL_NONE - don't attempt to use SSL (this is default).
+ * * 1: CURLUSESSL_TRY - try using SSL, proceed as normal otherwise.
+ * * 2 or 3: CURLUSESSL_CONTROL or CURLUSESSL_ALL - require SSL.
+ * @see https://curl.haxx.se/libcurl/c/CURLOPT_USE_SSL.html
+ */
+void
+smtpc_set_use_ssl(struct smtpc_request *req, long use_ssl);
 
 /**
  * This function does async SMTP request

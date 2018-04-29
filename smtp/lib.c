@@ -137,6 +137,36 @@ luaT_smtpc_request(lua_State *L)
 		smtpc_set_ssl_cert(req, lua_tostring(L, -1));
 	lua_pop(L, 1);
 
+	lua_getfield(L, 6, "use_ssl");
+	if (!lua_isnil(L, -1)) {
+		if (!lua_isnumber(L, -1)) {
+			smtpc_request_delete(req);
+			return luaL_error(L, "use_ssl option must be a number");
+		}
+		long use_ssl_in = lua_tonumber(L, -1);
+		long use_ssl_curl = 0;
+		switch (use_ssl_in) {
+		case 0:
+			use_ssl_curl = CURLUSESSL_NONE;
+			break;
+		case 1:
+			use_ssl_curl = CURLUSESSL_TRY;
+			break;
+		case 2:
+			use_ssl_curl = CURLUSESSL_CONTROL;
+			break;
+		case 3:
+			use_ssl_curl = CURLUSESSL_ALL;
+			break;
+		default:
+			smtpc_request_delete(req);
+			return luaL_error(
+				L, "use_ssl option must be >= 0 and <= 3");
+		}
+		smtpc_set_use_ssl(req, use_ssl_curl);
+	}
+	lua_pop(L, 1);
+
 	lua_getfield(L, 6, "timeout");
 	if (!lua_isnil(L, -1))
 		timeout = lua_tonumber(L, -1);

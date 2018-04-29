@@ -95,6 +95,8 @@ end
 --
 --      ssl_cert - set path to the file with SSL client certificate;
 --
+--      use_ssl - request using SSL/TLS (1 - preferably, 3 - mandatory);
+--
 --      timeout - Time-out the read operation and
 --          waiting for the curl api request
 --          after this amount of seconds;
