@@ -243,7 +243,9 @@ smtpc_execute(struct smtpc_request *req, double timeout)
 		req->status = (int) longval;
 		req->reason = "Ok";
 		break;
-	case CURLE_SSL_CACERT:
+#if LIBCURL_VERSION_NUM < 0x073e00
+	case CURLE_SSL_CACERT: /* deprecated in libcurl 7.62.0 */
+#endif
 	case CURLE_PEER_FAILED_VERIFICATION:
 		/* SSL Certificate Error */
 		req->status = -1;
