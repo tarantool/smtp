@@ -93,8 +93,8 @@ Example: `"sender@tarantool.org"`.
 
 `to` -- type = string; value = the name of the recipients as they would
 appear in an email 'To:' line.
-There can be more than one recipient, separated by commas.
-Example: `"receiver@tarantool.org"`.
+There can be more than one recipient, defined as an array.
+Example: {"receiver_1@tarantool.org", "receiver_2@tarantool.org"}.
 
 `body` -- type = string; value = the contents of the message.
 Example: `"Test Message"`.
