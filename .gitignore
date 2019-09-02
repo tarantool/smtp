@@ -24,6 +24,8 @@ VERSION
 CTestTestfile.cmake
 Testing
 CTestTestfile.cmake
+third_party/curl-out
+third_party/.curl.tmp
 
 # Vim Swap files
 .*.sw[a-z]
