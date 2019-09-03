@@ -100,23 +100,33 @@ Example: {"receiver_1@tarantool.org", "receiver_2@tarantool.org"}.
 Example: `"Test Message"`.
 
 `options` -- type = table; value = one or more of the following:
+* `cc` -- a string or a list to send email copy
+* `bcc` -- a string or a list to send a hidden copy
+* `subject` -- a subject for the email
+* `headers` -- a list of headers (say,
+   `{'Message-id: <1567551362.79420629@example.org>', ...}`)
+* `content_type` (string) -- set a content type (part of a Content-Type header,
+  defaults to 'text/plain')
+* `charset` (string) -- set a charset (part of a Content-Type header, defaults
+  to 'UTF-8')
 * `ca_path` -- path to an ssl certificate directory
 * `ca_file` (string) -- path to file containing
   [certificates for verifying the peer](http://curl.haxx.se/libcurl/c/CURLOPT_CAINFO.html)
 * `ca_path` (string) -- path to directory containing certificates for
   verifying the peer
-* `password` (string) -- password for server authorization
-* `ssl_cert` (string) -- path to
-  [SSL client certificate](http://curl.haxx.se/libcurl/c/CURLOPT_SSLCERT.html)
-* `ssl_key` (string) -- path to
-  [private key for TLS and/or SSL client certificate](http://curl.haxx.se/libcurl/c/CURLOPT_SSLKEY.html)
-* `timeout` (number) -- number of seconds to wait for the `libcurl` API
-* `username` (string) -- username for server authorization
-* `verbose` (boolean) -- whether `libcurl` verbose mode is enabled
 * `verify_host` (boolean) -- whether to
   [verify certificate names](http://curl.haxx.se/libcurl/c/CURLOPT_CAINFO.html)
 * `verify_peer` (boolean) -- whether to verify
   [the peer's SSL certificate](http://curl.haxx.se/libcurl/c/CURLOPT_SSL_VERIFYPEER.html)
+* `ssl_cert` (string) -- path to
+  [SSL client certificate](http://curl.haxx.se/libcurl/c/CURLOPT_SSLCERT.html)
+* `ssl_key` (string) -- path to
+  [private key for TLS and/or SSL client certificate](http://curl.haxx.se/libcurl/c/CURLOPT_SSLKEY.html)
+* `use_ssl` -- request using SSL/TLS (1 - preferably, 3 - mandatory)
+* `timeout` (number) -- number of seconds to wait for the `libcurl` API
+* `verbose` (boolean) -- whether `libcurl` verbose mode is enabled
+* `username` (string) -- a username for server authorization
+* `password` (string) -- a password for server authorization
 
 Example: `{timeout = 2}`
 
