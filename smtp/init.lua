@@ -73,11 +73,17 @@ end
 --  to      - email recipients
 --  body    - this parameter is optional, you may use it for passing
 --  options - this is a table of options.
---      cc      - a list to send email copy;
+--      cc - a string or a list to send email copy;
 --
---      bcc     - a list to send a hidden copy;
+--      bcc - a string or a list to send a hidden copy;
 --
 --      subject - a subject for the email;
+--
+--      content_type - set a content type (part of a Content-Type header,
+--          defaults to 'text/plain')
+--
+--      charset - set a charset (part of a Content-Type header, defaults to
+--          'UTF-8')
 --
 --      headers - a list of header;
 --
@@ -101,7 +107,11 @@ end
 --          waiting for the curl api request
 --          after this amount of seconds;
 --
---      verbose - set on/off verbose mode
+--      verbose - set on/off verbose mode;
+--
+--      username - a username for server authorization;
+--
+--      password - a password for server authorization;
 --
 --  Returns:
 --      {
