@@ -174,7 +174,7 @@ luaT_smtpc_request(lua_State *L)
 
 	lua_getfield(L, 6, "verbose");
 	if (!lua_isnil(L, -1) && lua_isboolean(L, -1))
-		smtpc_set_verbose(req, true);
+		smtpc_set_verbose(req, lua_toboolean(L, -1));
 	lua_pop(L, 1);
 
 	lua_getfield(L, 6, "username");
