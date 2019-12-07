@@ -131,7 +131,7 @@ smtpc_set_body(struct smtpc_request *req, const char *body, size_t size)
 void
 smtpc_set_verbose(struct smtpc_request *req, bool curl_verbose)
 {
-	curl_easy_setopt(req->easy, CURLOPT_VERBOSE, curl_verbose);
+	curl_easy_setopt(req->easy, CURLOPT_VERBOSE, (long)curl_verbose);
 }
 
 void
