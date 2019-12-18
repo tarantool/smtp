@@ -7,7 +7,8 @@ Build-Depends: debhelper (>= 9), cdbs,
                tarantool-dev (>= 1.6.8.0),
                libmsgpuck-dev (>= 1.0.0),
 # For /usr/bin/prove
-               perl (>= 5.10.0)
+               perl (>= 5.10.0),
+               libcurl4-openssl-dev | libcurl4-gnutls-dev | libcurl4-nss-dev
 Standards-Version: 3.9.6
 Homepage: https://github.com/tarantool/smtp
 Vcs-Git: git://github.com/tarantool/smtp.git
@@ -15,6 +16,6 @@ Vcs-Browser: https://github.com/tarantool/smtp
 
 Package: tarantool-smtp
 Architecture: i386 amd64 armhf arm64
-Depends: tarantool (>= 1.6.8.0), ${shlibs:Depends}, ${misc:Depends}
+Depends: tarantool (>= 1.6.8.0), curl, ${shlibs:Depends}, ${misc:Depends}
 Pre-Depends: ${misc:Pre-Depends}
 Description: SMTP client module for Tarantool
