@@ -1,7 +1,7 @@
 Name: tarantool-smtp
 Version: 1.0.0
 Release: 1%{?dist}
-Summary: SMTP cleint module for Tarantool
+Summary: SMTP client module for Tarantool
 Group: Applications/Databases
 License: BSD
 URL: https://github.com/tarantool/smtp
