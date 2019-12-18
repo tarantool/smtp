@@ -3,7 +3,7 @@
 </a>
 <!--
 <a href="https://travis-ci.org/tarantool/smtp">
-	<img src="https://travis-ci.org/tarantool/smtp.png?branch=ckit" align="right">
+	<img src="https://travis-ci.org/tarantool/smtp.png?branch=master" align="right">
 </a>
 -->
 

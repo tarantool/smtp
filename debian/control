@@ -1,4 +1,4 @@
-Source: tarantool-ckit
+Source: tarantool-smtp
 Priority: optional
 Section: database
 Maintainer: Roman Tsisyk <roman@tarantool.org>
@@ -9,13 +9,12 @@ Build-Depends: debhelper (>= 9), cdbs,
 # For /usr/bin/prove
                perl (>= 5.10.0)
 Standards-Version: 3.9.6
-Homepage: https://github.com/tarantool/modulekit
-Vcs-Git: git://github.com/tarantool/modulekit.git
-Vcs-Browser: https://github.com/tarantool/modulekit
+Homepage: https://github.com/tarantool/smtp
+Vcs-Git: git://github.com/tarantool/smtp.git
+Vcs-Browser: https://github.com/tarantool/smtp
 
-Package: tarantool-ckit
+Package: tarantool-smtp
 Architecture: i386 amd64 armhf arm64
 Depends: tarantool (>= 1.6.8.0), ${shlibs:Depends}, ${misc:Depends}
 Pre-Depends: ${misc:Pre-Depends}
-Description: C module template for Tarantool
- This package provides C module template for Tarantool.
+Description: SMTP client module for Tarantool

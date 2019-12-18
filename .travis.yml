@@ -12,7 +12,7 @@ git:
 
 env:
     global:
-      - PRODUCT=tarantool-ckit
+      - PRODUCT=tarantool-smtp
     matrix:
       - OS=el DIST=6
       - OS=el DIST=7
