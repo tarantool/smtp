@@ -29,8 +29,8 @@
 --  SUCH DAMAGE.
 --
 
-local fiber = require('fiber')
 local driver = require('smtp.lib')
+local digest = require('digest')
 
 local curl_mt
 
@@ -39,7 +39,7 @@ local curl_mt
 --
 --  Parameters:
 --
---  max_connectionss -  Maximum number of entries in the connection cache */
+--  max_connections -  Maximum number of entries in the connection cache */
 --
 --  Returns:
 --  curl object or raise error()
@@ -55,13 +55,13 @@ local smtp_new = function(opts)
     return setmetatable({ curl = curl, }, curl_mt )
 end
 
-local check_args_fmt = 'Use client:%s(...) instead of client.%s(...):'
+-- local check_args_fmt = 'Use client:%s(...) instead of client.%s(...):'
 
-local function check_args(self, method)
-    if type(self) ~= 'table' then
-        error(check_args_fmt:format(method, method), 2)
-    end
-end
+-- local function check_args(self, method)
+--     if type(self) ~= 'table' then
+--         error(check_args_fmt:format(method, method), 2)
+--     end
+-- end
 
 --
 --  <request> This function does SMTP request
@@ -71,8 +71,8 @@ end
 --  url     - smtp url, like smtps://imap.tarantool.org
 --  from    - email sender
 --  to      - email recipients
---  body    - this parameter is optional, you may use it for passing
---  options - this is a table of options.
+--  body    - email body
+--  options - this parameter is optional, you may use it for passing a table of options.
 --      cc - a string or a list to send email copy;
 --
 --      bcc - a string or a list to send a hidden copy;
@@ -80,12 +80,12 @@ end
 --      subject - a subject for the email;
 --
 --      content_type - set a content type (part of a Content-Type header,
---          defaults to 'text/plain')
+--          defaults to 'text/plain'), MIME type according to RFC2045
 --
 --      charset - set a charset (part of a Content-Type header, defaults to
 --          'UTF-8')
 --
---      headers - a list of header;
+--      headers - a list of headers;
 --
 --      ca_path - a path to ssl certificate dir;
 --
@@ -112,6 +112,20 @@ end
 --      username - a username for server authorization;
 --
 --      password - a password for server authorization;
+--
+--      attachments - a table with array of attachments
+--
+--          body - attachment body
+--
+--          content_type - set a content type (part of a Content-Type header,
+--              defaults to 'text/plain'), MIME type according to RFC2045
+--
+--          charset - set a charset (part of a Content-Type header, defaults to
+--          'UTF-8')
+--
+--          filename - a string with filename will be shown in e-mail
+--
+--          base64_encode - a boolean to base64 encode attachment content or not
 --
 --  Returns:
 --      {
@@ -155,7 +169,7 @@ curl_mt = {
             if not body or not url or not from then
                 error('request(url, from, to, body [, options]])')
             end
-            local header = ''
+            local header
             local recipients = {}
             header = 'From: ' .. from .. '\r\n' ..
                      'To: ' .. add_recipients(recipients, to) .. '\r\n'
@@ -167,15 +181,60 @@ curl_mt = {
                 header = header .. table.concat(opts.headers, '\r\n') .. '\r\n'
             end
 
-            local content_type = opts.content_type or 'text/plain'
-            local charset = opts.charset or 'UTF-8'
-            header = header .. 'Content-Type: ' .. content_type .. '; charset=' .. charset .. '\r\n'
+            local attachments = ''
+            if not opts.attachments or #opts.attachments == 0 then
+                local content_type = opts.content_type or 'text/plain'
+                local charset = opts.charset or 'UTF-8'
+                header = header .. 'Content-Type: ' .. content_type .. '; charset=' .. charset .. '\r\n'
 
-            if opts.subject then
-                header = header .. 'Subject: ' .. opts.subject .. '\r\n'
+                if opts.subject then
+                    header = header .. 'Subject: ' .. opts.subject .. '\r\n'
+                end
+
+                body = header .. '\r\n' .. body
+            else
+                local MULTIPART_CONTENT_TYPE = 'Content-Type: multipart/mixed; boundary=MULTIPART-MIXED-BOUNDARY;\r\n'
+                local MULTIPART_SEPARATOR = '\r\n--MULTIPART-MIXED-BOUNDARY\r\n'
+                local MULTIPART_END = '\r\n--MULTIPART-MIXED-BOUNDARY--\r\n'
+                for _, attachment in ipairs(opts.attachments) do
+                    local content_type = 'Content-Type: ' ..
+                                         (attachment.content_type or 'text/plain') ..
+                                         '; charset=' ..
+                                         (attachment.charset or  'UTF-8') ..
+                                         ';\r\n'
+                    local content_transfer_encoding = attachment.base64_encode
+                                                      and 'Content-Transfer-Encoding: base64;\r\n'
+                                                      or ''
+                    local content_disposition = 'Content-Disposition: inline; filename=' ..
+                                                attachment.filename ..
+                                                ';\r\n\r\n'
+                    local attachment_body = attachment.base64_encode
+                                            and digest.base64_encode(attachment.body)
+                                            or attachment.body
+                    attachments = attachments ..
+                                  MULTIPART_SEPARATOR ..
+                                  content_type ..
+                                  content_transfer_encoding ..
+                                  content_disposition ..
+                                  attachment_body
+                end
+
+                local content_type = 'Content-Type: ' .. (opts.content_type or 'text/plain') ..
+                                         '; charset=' .. (opts.charset or  'UTF-8') ..';\r\n\r\n'
+
+                if opts.subject then
+                    header = header .. 'Subject: ' .. opts.subject .. '\r\n' .. ''
+                end
+
+                body = MULTIPART_CONTENT_TYPE ..
+                       header ..
+                       MULTIPART_SEPARATOR ..
+                       content_type ..
+                       body ..
+                       attachments ..
+                       MULTIPART_END
             end
 
-            body = header .. '\r\n' .. body
             local from_addr = addr_spec(from)
             local recipients_addr = {}
             for _, recipient in ipairs(recipients) do
@@ -195,7 +254,7 @@ curl_mt = {
         --  total_requests - this is a total number of requests
         --
         --  failed_requests - this is a total number of requests which have
-        --      failed (included systeme erros, curl errors, SMTP
+        --      failed (included system errors, curl errors, SMTP
         --      errors and so on)
         --  }
         --  or error()
@@ -210,7 +269,7 @@ curl_mt = {
 --
 -- Export
 --
-local smtp_default = smtp_new()
+-- local smtp_default = smtp_new()
 local this_module = { new = smtp_new, }
 
 package.loaded['smtp.client'] = this_module

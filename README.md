@@ -46,13 +46,13 @@ You have two ways to install `tarantool/smtp`:
 
    With Tarantool 1.7.4+, say:
 
-   ```
+   ```bash
    tarantoolctl rocks install smtp
    ```
 
    With earlier Tarantool versions, set up Lua rocks and then say:
 
-   ```
+   ```bash
    luarocks --local install smtp
    ```
 
@@ -127,21 +127,57 @@ Example: `"Test Message"`.
 * `verbose` (boolean) -- whether `libcurl` verbose mode is enabled
 * `username` (string) -- a username for server authorization
 * `password` (string) -- a password for server authorization
+* `attachments` (table) -- a table (array) with attachments data
+  * `body` (any) attachment body contents
+  * `content_type` (string) -- set a content type (part of a Content-Type header,
+  defaults to 'text/plain')
+  * `charset` (string) -- set a charset (part of a Content-Type header, defaults
+  to 'UTF-8')
+  * `filename` (string) -- a string with filename will be shown in e-mail
+  * `base64_encode` (boolean) -- a boolean to base64 encode attachment content or not
 
 Example: `{timeout = 2}`
 
 Example of a complete request:
 
-```
+```lua
 response =
-client:request("smtp://127.0.0.1:34324",`"sender@tarantool.org"`,`"receiver@tarantool.org"`,"Test
-Message",{timeout=2})
+client:request("smtp://127.0.0.1:34324","sender@tarantool.org","receiver@tarantool.org","Test Message",{timeout=2})
 ```
 
 The response to the request will be a table containing a status (number)
 and a reason (string).
 Example: `{status: 250, reason: Ok}`
 (The standard status code 250 means the request was executed.)
+
+Example of a complete request with attachments:
+
+```lua
+response =
+client:request(
+  "smtp://127.0.0.1:34324",
+  "sender@tarantool.org",
+  "receiver@tarantool.org",
+  "Test Message",
+  {
+    timeout=2,
+    attachments = {
+      {
+          body = json.encode('{"key1":"value1"}'),
+          content_type = 'application/json',
+          charset = 'UTF-8',
+          filename = 'json1.json',
+          base64_encode = true
+      },
+      {
+          body = json.encode('{"key2":"value2"}'),
+          content_type = 'application/json',
+          filename = 'json2.json',
+          base64_encode = false
+      }
+    }
+  })
+```
 
 [Back to contents](#contents)
 
@@ -278,7 +314,7 @@ that the server received EHLO, MAIL FROM, RCPT TO and DATA.
 
 Now look at the response. It should look like this:
 
-```
+```tarantool
 tarantool> response
 ---
 - status: 250
@@ -293,13 +329,13 @@ is done with a local test server, with none of the usual authorization options.)
 Once you see that the response is 'Ok', you can switch from being a sender to
 being a receiver. Say:
 
-```
+```lua
 mails:get()
 ```
 
 And now the response should look like this:
 
-```
+```tarantool
 tarantool> mails.get()
 ---
 - from: <sender@tarantool.org>

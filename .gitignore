@@ -24,6 +24,9 @@ VERSION
 CTestTestfile.cmake
 Testing
 CTestTestfile.cmake
+.history
+.vscode
+.rocks
 
 # Vim Swap files
 .*.sw[a-z]
