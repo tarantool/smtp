@@ -31,6 +31,7 @@
 
 local fiber = require('fiber')
 local driver = require('smtp.lib')
+local digest = require('digest')
 
 local curl_mt
 
@@ -53,14 +54,6 @@ local smtp_new = function(opts)
 
     local curl = driver.new(opts.max_connections)
     return setmetatable({ curl = curl, }, curl_mt )
-end
-
-local check_args_fmt = 'Use client:%s(...) instead of client.%s(...):'
-
-local function check_args(self, method)
-    if type(self) ~= 'table' then
-        error(check_args_fmt:format(method, method), 2)
-    end
 end
 
 --
@@ -113,6 +106,21 @@ end
 --
 --      password - a password for server authorization;
 --
+--      attachments - a table with array of attachments
+--
+--          body - attachment body
+--
+--          content_type - set a content type (part of a Content-Type header,
+--              defaults to 'text/plain'), MIME type according to RFC2045
+--
+--          charset - set a charset (part of a Content-Type header, defaults to
+--          'UTF-8')
+--
+--          filename - a string with filename will be shown in e-mail
+--
+--          base64_encode - a boolean to base64 encode attachment content or not, defaults to true
+--
+--
 --  Returns:
 --      {
 --          status=NUMBER,
@@ -155,27 +163,65 @@ curl_mt = {
             if not body or not url or not from then
                 error('request(url, from, to, body [, options]])')
             end
-            local header = ''
+            local header
             local recipients = {}
             header = 'From: ' .. from .. '\r\n' ..
                      'To: ' .. add_recipients(recipients, to) .. '\r\n'
             if opts.cc then
                 header = header .. 'Cc: ' .. add_recipients(recipients, opts.cc) .. '\r\n'
             end
+            if opts.subject then
+                header = header .. 'Subject: ' .. opts.subject .. '\r\n'
+            end
             add_recipients(recipients, opts.bcc)
             if opts.headers and #opts.headers > 0 then
                 header = header .. table.concat(opts.headers, '\r\n') .. '\r\n'
             end
+            local content_type = 'Content-Type: ' .. (opts.content_type or 'text/plain') ..
+            '; charset=' .. (opts.charset or  'UTF-8') ..';\r\n'
 
-            local content_type = opts.content_type or 'text/plain'
-            local charset = opts.charset or 'UTF-8'
-            header = header .. 'Content-Type: ' .. content_type .. '; charset=' .. charset .. '\r\n'
+            if not opts.attachments or #opts.attachments == 0 then
+                body = header .. content_type ..'\r\n' .. body
+            else
+                -- multipart content according to https://tools.ietf.org/html/rfc1341
+                local MULTIPART_CONTENT_TYPE = 'Content-Type: multipart/mixed; boundary=MULTIPART-MIXED-BOUNDARY;\r\n'
+                local MULTIPART_SEPARATOR = '\r\n--MULTIPART-MIXED-BOUNDARY\r\n'
+                local MULTIPART_END = '\r\n--MULTIPART-MIXED-BOUNDARY--\r\n'
+                local attachments = ''
 
-            if opts.subject then
-                header = header .. 'Subject: ' .. opts.subject .. '\r\n'
+                for _, attachment in ipairs(opts.attachments) do
+                    if attachment.base64_encode == nil then attachment.base64_encode = true end
+                    local attachment_content_type = 'Content-Type: ' ..
+                                         (attachment.content_type or 'text/plain') ..
+                                         '; charset=' ..
+                                         (attachment.charset or  'UTF-8') ..
+                                         ';\r\n'
+                    local content_transfer_encoding = attachment.base64_encode
+                                                      and 'Content-Transfer-Encoding: base64;\r\n'
+                                                      or ''
+                    local content_disposition = 'Content-Disposition: inline; filename=' ..
+                                                attachment.filename ..
+                                                ';\r\n\r\n'
+                    local attachment_body = attachment.base64_encode
+                                            and digest.base64_encode(attachment.body)
+                                            or attachment.body
+                    attachments = attachments ..
+                                  MULTIPART_SEPARATOR ..
+                                  attachment_content_type ..
+                                  content_transfer_encoding ..
+                                  content_disposition ..
+                                  attachment_body
+                end
+
+                body = MULTIPART_CONTENT_TYPE ..
+                       header ..
+                       MULTIPART_SEPARATOR ..
+                       content_type ..
+                       body ..
+                       attachments ..
+                       MULTIPART_END
             end
 
-            body = header .. '\r\n' .. body
             local from_addr = addr_spec(from)
             local recipients_addr = {}
             for _, recipient in ipairs(recipients) do
@@ -210,7 +256,6 @@ curl_mt = {
 --
 -- Export
 --
-local smtp_default = smtp_new()
 local this_module = { new = smtp_new, }
 
 package.loaded['smtp.client'] = this_module

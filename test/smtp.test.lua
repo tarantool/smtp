@@ -56,7 +56,7 @@ local server = socket.tcp_server('127.0.0.1', 0, smtp_h)
 local addr = 'smtp://127.0.0.1:' .. server:name().port
 
 test:test("smtp.client", function(test)
-    test:plan(5)
+    test:plan(8)
     local r
     local m
 
@@ -82,6 +82,52 @@ test:test("smtp.client", function(test)
     m = mails:get()
     test:is_deeply(m.rcpt, {'<cc@tarantool.org>'}, 'no rcpt')
 
+    r = client:request(addr, 'sender@tarantool.org',
+                       'receiver@tarantool.org',
+                       'mail.body',{
+                           attachments = {
+                            {
+                                body = 'Test message',
+                                content_type = 'text/plain',
+                                filename = 'text.txt',
+                            }
+                        }})
+    m = mails:get()
+    local boundaries = select(2, string.gsub(m.text, "MULTIPART%-MIXED%-BOUNDARY", ""))
+    local attachment = select(2, string.gsub(m.text, "VGVzdCBtZXNzYWdl", ""))
+    test:is(boundaries + attachment, 5, 'attach default')
+
+    r = client:request(addr, 'sender@tarantool.org',
+                       'receiver@tarantool.org',
+                       'mail.body',{
+                           attachments = {
+                           {
+                               body = 'Test message',
+                               content_type = 'text/plain',
+                               filename = 'text.txt',
+                               base64_encode = false,
+                           }
+                       }})
+    m = mails:get()
+    boundaries = select(2, string.gsub(m.text, "MULTIPART%-MIXED%-BOUNDARY", ""))
+    attachment = select(2, string.gsub(m.text, "Test message", ""))
+    test:is(boundaries + attachment, 5, 'attach plain')
+
+    r = client:request(addr, 'sender@tarantool.org',
+    'receiver@tarantool.org',
+    'mail.body',{
+        attachments = {
+        {
+            body = 'Test message',
+            content_type = 'text/plain',
+            filename = 'text.txt',
+            base64_encode = true,
+        }
+    }})
+    m = mails:get()
+    boundaries = select(2, string.gsub(m.text, "MULTIPART%-MIXED%-BOUNDARY", ""))
+    attachment = select(2, string.gsub(m.text, "VGVzdCBtZXNzYWdl", ""))
+    test:is(boundaries + attachment, 5, 'attach base64')
 end)
 
 os.exit(test:check() == true and 0 or -1)
