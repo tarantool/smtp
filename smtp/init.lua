@@ -39,7 +39,7 @@ local curl_mt
 --
 --  Parameters:
 --
---  max_connectionss -  Maximum number of entries in the connection cache */
+--  max_connections -  Maximum number of entries in the connection cache */
 --
 --  Returns:
 --  curl object or raise error()
@@ -195,7 +195,7 @@ curl_mt = {
         --  total_requests - this is a total number of requests
         --
         --  failed_requests - this is a total number of requests which have
-        --      failed (included systeme erros, curl errors, SMTP
+        --      failed (included system errors, curl errors, SMTP
         --      errors and so on)
         --  }
         --  or error()
