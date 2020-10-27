@@ -151,10 +151,10 @@ curl_mt = {
         --
         request = function(self, url, from, to, body, opts)
             opts = opts or {}
-            to = to or {}
-            if not body or not url or not from then
+            if not body or not url or not from or not (to or opts.cc or opts.bcc) then
                 error('request(url, from, to, body [, options]])')
             end
+            to = to or {}
             local header = ''
             local recipients = {}
             header = 'From: ' .. from .. '\r\n' ..
