@@ -127,6 +127,14 @@ Example: `"Test Message"`.
 * `verbose` (boolean) -- whether `libcurl` verbose mode is enabled
 * `username` (string) -- a username for server authorization
 * `password` (string) -- a password for server authorization
+* `attachments` (table) -- a table (array) with attachments data
+  * `body` (any) attachment body contents
+  * `content_type` (string) -- set a content type (part of a Content-Type header,
+  defaults to 'text/plain')
+  * `charset` (string) -- set a charset (part of a Content-Type header, defaults
+  to 'UTF-8')
+  * `filename` (string) -- a string with filename will be shown in e-mail
+  * `base64_encode` (boolean) -- a boolean to base64 encode attachment content or not, default is true
 
 Example: `{timeout = 2}`
 
@@ -142,6 +150,35 @@ The response to the request will be a table containing a status (number)
 and a reason (string).
 Example: `{status: 250, reason: Ok}`
 (The standard status code 250 means the request was executed.)
+
+Example of a complete request with attachments:
+
+```lua
+response =
+client:request(
+  "smtp://127.0.0.1:34324",
+  "sender@tarantool.org",
+  "receiver@tarantool.org",
+  "Test Message",
+  {
+    timeout=2,
+    attachments = {
+      {
+          body = json.encode('{"key1":"value1"}'),
+          content_type = 'application/json',
+          charset = 'UTF-8',
+          filename = 'json.json',
+          base64_encode = true
+      },
+      {
+          body = 'Test example',
+          content_type = 'text/plain',
+          filename = 'example.txt',
+          base64_encode = false
+      }
+    }
+  })
+```
 
 [Back to contents](#contents)
 
