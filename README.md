@@ -46,13 +46,13 @@ You have two ways to install `tarantool/smtp`:
 
    With Tarantool 1.7.4+, say:
 
-   ```
+   ```sh
    tarantoolctl rocks install smtp
    ```
 
    With earlier Tarantool versions, set up Lua rocks and then say:
 
-   ```
+   ```sh
    luarocks --local install smtp
    ```
 
@@ -100,6 +100,7 @@ Example: {"receiver_1@tarantool.org", "receiver_2@tarantool.org"}.
 Example: `"Test Message"`.
 
 `options` -- type = table; value = one or more of the following:
+
 * `cc` -- a string or a list to send email copy
 * `bcc` -- a string or a list to send a hidden copy
 * `subject` -- a subject for the email
@@ -132,7 +133,7 @@ Example: `{timeout = 2}`
 
 Example of a complete request:
 
-```
+```lua
 response =
 client:request("smtp://127.0.0.1:34324",`"sender@tarantool.org"`,`"receiver@tarantool.org"`,"Test
 Message",{timeout=2})
@@ -278,7 +279,7 @@ that the server received EHLO, MAIL FROM, RCPT TO and DATA.
 
 Now look at the response. It should look like this:
 
-```
+```lua
 tarantool> response
 ---
 - status: 250
@@ -293,13 +294,13 @@ is done with a local test server, with none of the usual authorization options.)
 Once you see that the response is 'Ok', you can switch from being a sender to
 being a receiver. Say:
 
-```
+```lua
 mails:get()
 ```
 
 And now the response should look like this:
 
-```
+```lua
 tarantool> mails.get()
 ---
 - from: <sender@tarantool.org>
