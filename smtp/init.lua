@@ -155,6 +155,11 @@ curl_mt = {
             if not body or not url or not from then
                 error('request(url, from, to, body [, options]])')
             end
+            if (not to or not (to and to == {} or #to > 0)) and
+               (not opts.cc or not (opts.cc and opts.cc == {} or #opts.cc > 0)) and
+               (not opts.bcc or not (opts.bcc and opts.bcc == {} or #opts.cc > 0)) then
+                error('No recipients in request')
+            end
             local header = ''
             local recipients = {}
             header = 'From: ' .. from .. '\r\n' ..
