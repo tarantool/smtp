@@ -151,10 +151,15 @@ curl_mt = {
         --
         request = function(self, url, from, to, body, opts)
             opts = opts or {}
-            if not body or not url or not from or not (to or opts.cc or opts.bcc) then
+            to = to or {}
+            if not body or not url or not from then
                 error('request(url, from, to, body [, options]])')
             end
-            to = to or {}
+            if (not to or not (to and to == {} or #to > 0)) and
+               (not opts.cc or not (opts.cc and opts.cc == {} or #opts.cc > 0)) and
+               (not opts.bcc or not (opts.bcc and opts.bcc == {} or #opts.cc > 0)) then
+                error('No recipients in request')
+            end
             local header = ''
             local recipients = {}
             header = 'From: ' .. from .. '\r\n' ..

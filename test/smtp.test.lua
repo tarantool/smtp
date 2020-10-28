@@ -56,7 +56,7 @@ local server = socket.tcp_server('127.0.0.1', 0, smtp_h)
 local addr = 'smtp://127.0.0.1:' .. server:name().port
 
 test:test("smtp.client", function(test)
-    test:plan(5)
+    test:plan(8)
     local r
     local m
 
@@ -82,6 +82,29 @@ test:test("smtp.client", function(test)
     m = mails:get()
     test:is_deeply(m.rcpt, {'<cc@tarantool.org>'}, 'no rcpt')
 
+    local ok = pcall(function() return
+    client:request(addr, 'sender@tarantool.org',
+                       nil,
+                       'mail.body',
+                       {})
+                    end)
+    test:is(ok, false, 'no any rcpt nil')
+
+    ok = pcall(function() return
+        client:request(addr, 'sender@tarantool.org',
+                           '',
+                           'mail.body',
+                           {})
+                        end)
+    test:is(ok, false, 'no any rcpt blank')
+
+    ok = pcall(function() return
+        client:request(addr, 'sender@tarantool.org',
+                            {},
+                            'mail.body',
+                            {})
+                        end)
+    test:is(ok, false, 'no any rcpt {}')
 end)
 
 os.exit(test:check() == true and 0 or -1)
