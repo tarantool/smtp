@@ -20,7 +20,7 @@ This package provides SMTP client module for Tarantool.
 %setup -q -n %{name}-%{version}
 
 %build
-%cmake . -DCMAKE_BUILD_TYPE=RelWithDebInfo
+%cmake . -DCMAKE_BUILD_TYPE=RelWithDebInfo -DTARANTOOL_CURL_REQUIRED=ON
 make %{?_smp_mflags}
 
 %check

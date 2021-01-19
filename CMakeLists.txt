@@ -12,6 +12,9 @@ set(TARANTOOL_FIND_REQUIRED ON)
 find_package(Tarantool)
 include_directories(${TARANTOOL_INCLUDE_DIRS})
 
+option(TARANTOOL_CURL_REQUIRED "Use Tarantool bundled lubCURL." OFF)
+option(USE_TARANTOOL_CURL "Use Tarantool bundled lubCURL." ON)
+
 # Set CFLAGS
 # set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -Wall -Wextra")
