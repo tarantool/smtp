@@ -56,7 +56,7 @@ local server = socket.tcp_server('127.0.0.1', 0, smtp_h)
 local addr = 'smtp://127.0.0.1:' .. server:name().port
 
 test:test("smtp.client", function(test)
-    test:plan(8)
+    test:plan(10)
     local r
     local m
 
@@ -128,6 +128,24 @@ test:test("smtp.client", function(test)
     boundaries = select(2, string.gsub(m.text, "MULTIPART%-MIXED%-BOUNDARY", ""))
     attachment = select(2, string.gsub(m.text, "VGVzdCBtZXNzYWdl", ""))
     test:is(boundaries + attachment, 5, 'attach base64')
+
+    r = client:request(addr, 'sender@tarantool.org',
+                       'receiver@tarantool.org',
+                       '', {subject  = 'abcdefghijklmnopqrstuvwxyz'})
+
+    m = mails:get()
+    local subj = select(2, string.gsub(m.text, "Subject: abcdefghijklmnopqrstuvwxyz",""))
+    test:is(subj, 1, 'subject codes <127')
+
+    r = client:request(addr, 'sender@tarantool.org',
+                       'receiver@tarantool.org',
+                       '', {subject  = 'abcdefghijkяlmnopqrstuvwxyz'})
+
+    m = mails:get()
+    subj = select(2, string.gsub(
+                  m.text,
+                  "Subject: =%?utf%-8%?b%?YWJjZGVmZ2hpamvRj2xtbm9wcXJzdHV2d3h5eg==%?=", ""))
+    test:is(subj, 1, 'subject codes >127')
 end)
 
 os.exit(test:check() == true and 0 or -1)

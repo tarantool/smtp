@@ -152,6 +152,27 @@ local function addr_spec(mailbox)
     return mailbox:match('^.*[ \t]*<(.-)>[ \t]*$') or mailbox
 end
 
+local function is_gt_127(text)
+    for idx = 1, #text do
+        if text:byte(idx) > 127 then
+           return true
+        end
+    end
+    return false
+end
+
+-- According to RFC 822#3.3 subject must contain characters with codes 0-127:
+-- https://tools.ietf.org/html/rfc822
+-- For compatibility with legacy mail relays simply base64 encode subject field
+-- if char codes >127 is present
+local function encode_subject(subj)
+    if subj and type(subj) == 'string' and subj ~= '' and is_gt_127(subj) then
+        local encoded = digest.base64_encode(subj)
+        return '=?utf-8?b?' .. encoded .. '?='
+    end
+    return subj
+end
+
 curl_mt = {
     __index = {
         --
@@ -171,7 +192,7 @@ curl_mt = {
                 header = header .. 'Cc: ' .. add_recipients(recipients, opts.cc) .. '\r\n'
             end
             if opts.subject then
-                header = header .. 'Subject: ' .. opts.subject .. '\r\n'
+                header = header .. 'Subject: ' .. encode_subject(opts.subject) .. '\r\n'
             end
             add_recipients(recipients, opts.bcc)
             if opts.headers and #opts.headers > 0 then
