@@ -114,16 +114,16 @@ test:test("smtp.client", function(test)
     test:is(boundaries + attachment, 5, 'attach plain')
 
     r = client:request(addr, 'sender@tarantool.org',
-    'receiver@tarantool.org',
-    'mail.body',{
-        attachments = {
-        {
-            body = 'Test message',
-            content_type = 'text/plain',
-            filename = 'text.txt',
-            base64_encode = true,
-        }
-    }})
+                       'receiver@tarantool.org',
+                       'mail.body',{
+                           attachments = {
+                           {
+                               body = 'Test message',
+                               content_type = 'text/plain',
+                               filename = 'text.txt',
+                               base64_encode = true,
+                           }
+                       }})
     m = mails:get()
     boundaries = select(2, string.gsub(m.text, "MULTIPART%-MIXED%-BOUNDARY", ""))
     attachment = select(2, string.gsub(m.text, "VGVzdCBtZXNzYWdl", ""))
