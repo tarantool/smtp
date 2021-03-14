@@ -181,7 +181,7 @@ curl_mt = {
             '; charset=' .. (opts.charset or  'UTF-8') ..';\r\n'
 
             if not opts.attachments or #opts.attachments == 0 then
-                body = header .. content_type ..'\r\n' .. body
+                body = header .. content_type .. '\r\n' .. body
             else
                 -- multipart content according to https://tools.ietf.org/html/rfc1341
                 local MULTIPART_CONTENT_TYPE = 'Content-Type: multipart/mixed; boundary=MULTIPART-MIXED-BOUNDARY;\r\n'
@@ -217,6 +217,7 @@ curl_mt = {
                        header ..
                        MULTIPART_SEPARATOR ..
                        content_type ..
+                       '\r\n' ..
                        body ..
                        attachments ..
                        MULTIPART_END
