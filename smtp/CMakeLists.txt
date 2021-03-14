@@ -4,7 +4,7 @@ endif(APPLE)
 
 # Add C library
 add_library(lib SHARED lib.c smtpc.c)
-target_link_libraries(lib curl ${MSGPUCK_LIBRARIES})
+target_link_libraries(lib curl)
 set_target_properties(lib PROPERTIES PREFIX "" OUTPUT_NAME "lib")
 
 # Install module
