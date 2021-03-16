@@ -167,7 +167,7 @@ end
 -- if char codes >127 is present
 local function encode_subject(subj)
     if subj and type(subj) == 'string' and subj ~= '' and is_gt_127(subj) then
-        local encoded = digest.base64_encode(subj)
+        local encoded = digest.base64_encode(subj, { nowrap = true })
         return '=?utf-8?b?' .. encoded .. '?='
     end
     return subj
@@ -218,19 +218,19 @@ curl_mt = {
                                          (attachment.charset or  'UTF-8') ..
                                          ';\r\n'
                     local content_transfer_encoding = attachment.base64_encode
-                                                      and 'Content-Transfer-Encoding: base64;\r\n'
+                                                      and 'Content-Transfer-Encoding: base64\r\n\r\n'
                                                       or ''
-                    local content_disposition = 'Content-Disposition: inline; filename=' ..
+                    local content_disposition = 'Content-Disposition: inline; filename="' ..
                                                 attachment.filename ..
-                                                ';\r\n\r\n'
+                                                '";\r\n'
                     local attachment_body = attachment.base64_encode
                                             and digest.base64_encode(attachment.body)
                                             or attachment.body
                     attachments = attachments ..
                                   MULTIPART_SEPARATOR ..
                                   attachment_content_type ..
-                                  content_transfer_encoding ..
                                   content_disposition ..
+                                  content_transfer_encoding ..
                                   attachment_body
                 end
 
@@ -238,6 +238,7 @@ curl_mt = {
                        header ..
                        MULTIPART_SEPARATOR ..
                        content_type ..
+                       '\r\n' ..
                        body ..
                        attachments ..
                        MULTIPART_END
