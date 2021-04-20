@@ -1,0 +1,242 @@
+name: testing
+
+on: [push, pull_request]
+
+# TODO: Build RPM / Deb packages and run testing using them.
+# TODO: Run testing using luarocks installed module.
+# TODO: Use caching of fixed tarantool versions or improve
+#       setup-tarantool to use it here.
+
+jobs:
+  testing_linux:
+    # We want to run on external PRs, but not on our own internal
+    # PRs as they'll be run by the push to the branch.
+    #
+    # The main trick is described here:
+    # https://github.com/Dart-Code/Dart-Code/pull/2375
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+
+    strategy:
+      fail-fast: false
+      matrix:
+        tarantool:
+          # gh-29: 2.5.{1,2,3}, 2.6.{1,2} and 2.7.1 are disabled
+          # due to symbol names clash and lack of smtp(s) support
+          # in tarantool's bundled libcurl.
+          - release/1.10.7
+          - release/1.10.8
+          - release/1.10.9
+          - release/1.10.10
+          - release/2.4.1
+          - release/2.4.2
+          - release/2.4.3
+          # - release/2.5.1
+          # - release/2.5.2
+          # - release/2.5.3
+          # - release/2.6.1
+          # - release/2.6.2
+          - release/2.6.3
+          # - release/2.7.1
+          - release/2.7.2
+          - release/2.8.1
+          - live/1.10
+          - live/2.6
+          - live/2.7
+          - live/2.8
+          - live/2.9
+
+    env:
+      # Prevent packages like tzdata from asking configuration
+      # parameters interactively.
+      # See https://github.com/packpack/packpack/issues/7
+      DEBIAN_FRONTEND: noninteractive
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Export T_* environment variables
+        run: |
+          # Split ${{ matrix.tarantool }}.
+          T="${{ matrix.tarantool }}"
+          T_KIND="${T%%/*}"
+          T_VERSION="${T##*/}"
+          if [ "${T_KIND}" = release ]; then
+              T_SERIES="${T_VERSION%.*}"
+          else
+              T_SERIES="${T_VERSION}"
+          fi
+
+          # Make the variables available for the next steps.
+          printf '%s=%s\n' T_KIND    "${T_KIND}"    >> "${GITHUB_ENV}"
+          printf '%s=%s\n' T_VERSION "${T_VERSION}" >> "${GITHUB_ENV}"
+          printf '%s=%s\n' T_SERIES  "${T_SERIES}"  >> "${GITHUB_ENV}"
+
+      - name: Setup tarantool ${{ env.T_SERIES }} repository
+        run: |
+          URL="https://tarantool.io/${T_KIND}/${T_SERIES}/installer.sh"
+          curl -fsSL "${URL}" > installer.sh
+          chmod a+x installer.sh
+          sudo ./installer.sh
+
+      - name: Install tarantool ${{ matrix.tarantool }}
+        run: |
+          # Install tarantool.
+          #
+          # We don't use tarantool/setup-tarantool GitHub Action
+          # at the moment due to several reasons:
+          #
+          # 1. No way to install a non-last tarantool version from
+          #    a repository:
+          #    https://github.com/tarantool/setup-tarantool/issues/15
+          # 2. No way to install a live package:
+          #    https://github.com/tarantool/setup-tarantool/issues/9
+          # 3. We likely will install tarantool in a container
+          #    job and it'll require support from the action side:
+          #    https://github.com/tarantool/setup-tarantool/issues/11
+          sudo apt-get install -y "tarantool=${T_VERSION}*" "tarantool-dev=${T_VERSION}*"
+
+      - name: Verify tarantool version
+        run: |
+          # Workaround https://github.com/tarantool/tarantool/issues/4983
+          # Workaround https://github.com/tarantool/tarantool/issues/5040
+          tarantool -e "require('fiber').sleep(0) assert(_TARANTOOL:startswith('${T_VERSION}'), _TARANTOOL) os.exit()"
+
+      - name: Install build dependencies for the module
+        run: sudo apt-get install -y libcurl4-openssl-dev
+
+      - name: Clone the module
+        uses: actions/checkout@v2
+
+      - name: Build the module
+        run: cmake . && make
+
+      - name: Run tests
+        run: make check
+
+  testing_mac_os:
+    # We want to run on external PRs, but not on our own internal
+    # PRs as they'll be run by the push to the branch.
+    #
+    # The main trick is described here:
+    # https://github.com/Dart-Code/Dart-Code/pull/2375
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on:
+          - macos-10.15
+          - macos-11.0
+        tarantool:
+          # gh-29: 2.5.{1,2,3}, 2.6.{1,2} and 2.7.1 are disabled
+          # due to symbol names clash and lack of smtp(s) support
+          # in tarantool's bundled libcurl.
+          #
+          # Unlike source builds we have there, brew tarantool
+          # installation uses system's libcurl and is not affected
+          # by the problem.
+          - brew
+          - 1.10.7
+          - 1.10.8
+          - 1.10.9
+          - 1.10.10
+          - 2.4.1
+          - 2.4.2
+          - 2.4.3
+          # - 2.5.1
+          # - 2.5.2
+          # - 2.5.3
+          # - 2.6.1
+          # - 2.6.2
+          - 2.6.3
+          # - 2.7.1
+          - 2.7.2
+          - 2.8.1
+          - master
+
+    env:
+      # Make sense only for non-brew jobs.
+      #
+      # Set as absolute paths to avoid any possible confusion
+      # after changing a current directory.
+      T_VERSION: ${{ matrix.tarantool }}
+      T_SRCDIR: ${{ format('{0}/tarantool-{1}', github.workspace, matrix.tarantool) }}
+      T_DESTDIR: ${{ format('{0}/tarantool-{1}-dest', github.workspace, matrix.tarantool) }}
+      SRCDIR: ${{ format('{0}/{1}', github.workspace, github.repository) }}
+
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - name: Install latest tarantool from brew
+        run: brew install tarantool
+        if: matrix.tarantool == 'brew'
+
+      - name: Cache built tarantool ${{ env.T_VERSION }}
+        uses: actions/cache@v2
+        id: cache
+        with:
+          path: ${{ env.T_DESTDIR }}
+          # v2 is due to https://github.com/actions/cache/issues/2
+          # and because the cache keys without -v2 may contain
+          # debug tarantool builds. It is desirable to have all
+          # build either debug or release (RelWithDebInfo), but
+          # we unable to build all releases in debug (see below).
+          key: ${{ matrix.runs-on }}-${{ matrix.tarantool }}-v2
+        if: matrix.tarantool != 'brew' && matrix.tarantool != 'master'
+
+      - name: Install tarantool build dependencies
+        run: brew install autoconf automake libtool
+        if: matrix.tarantool != 'brew' && steps.cache.outputs.cache-hit != 'true'
+
+      - name: Clone tarantool ${{ env.T_VERSION }}
+        uses: actions/checkout@v2
+        with:
+          repository: tarantool/tarantool
+          ref: ${{ env.T_VERSION }}
+          path: ${{ env.T_SRCDIR }}
+          submodules: true
+          # fetch-depth is 1 by default and it is okay for
+          # building from a tag. However we have master in
+          # the version list.
+          fetch-depth: 0
+        if: matrix.tarantool != 'brew' && steps.cache.outputs.cache-hit != 'true'
+
+      - name: Build tarantool ${{ env.T_VERSION }} from sources
+        run: |
+          mkdir "${T_DESTDIR}"
+          cd "${T_SRCDIR}"
+          # Set RelWithDebInfo just to disable -Werror.
+          #
+          # There are tarantool releases on which AppleClang
+          # complains about the problem that was fixed later in
+          # https://github.com/tarantool/tarantool/commit/7e8688ff8885cc7813d12225e03694eb8886de29
+          cmake . -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          make -j$(sysctl -n hw.logicalcpu)
+          make DESTDIR="${T_DESTDIR}" install
+        if: matrix.tarantool != 'brew' && steps.cache.outputs.cache-hit != 'true'
+
+      - name: Export TARANTOOL_DIR and PATH
+        run: |
+          printf '%s=%s\n' TARANTOOL_DIR "${T_DESTDIR}/usr/local" >> "${GITHUB_ENV}"
+          printf '%s\n' "${T_DESTDIR}/usr/local/bin" >> "${GITHUB_PATH}"
+        if: matrix.tarantool != 'brew'
+
+      - name: Verify tarantool version
+        run: |
+          # Workaround https://github.com/tarantool/tarantool/issues/4983
+          # Workaround https://github.com/tarantool/tarantool/issues/5040
+          tarantool -e "require('fiber').sleep(0) assert(_TARANTOOL:startswith('${T_VERSION}'), _TARANTOOL) os.exit()"
+        if: matrix.tarantool != 'brew' && matrix.tarantool != 'master'
+
+      - name: Clone the module
+        uses: actions/checkout@v2
+        with:
+          path: ${{ env.SRCDIR }}
+
+      - name: Build the module
+        run: |
+          cd "${SRCDIR}"
+          cmake . && make
+
+      - name: Run tests
+        run: |
+          cd "${SRCDIR}"
+          make check
