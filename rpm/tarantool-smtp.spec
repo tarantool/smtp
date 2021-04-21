@@ -12,6 +12,7 @@ BuildRequires: tarantool-devel >= 1.6.8.0
 BuildRequires: curl-devel
 BuildRequires: /usr/bin/prove
 Requires: tarantool >= 1.6.8.0
+Requires: curl
 
 %description
 This package provides SMTP client module for Tarantool.

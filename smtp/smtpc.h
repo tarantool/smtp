@@ -35,6 +35,21 @@
 
 #include <curl/curl.h>
 
+/* {{{ Subsystem initialization */
+
+/**
+ * Initialize the subsystem.
+ *
+ * Perform libcurl symbols resolving.
+ *
+ * Return 0 on success. Otherwise return -1 and set an error into
+ * the diagnostics area.
+ */
+int
+smtpc_init(void);
+
+/* Subsystem initialization }}} */
+
 /** {{{ Environment */
 
 typedef void CURLM;

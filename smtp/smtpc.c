@@ -34,9 +34,131 @@
 #include <stdlib.h>
 
 #include <assert.h>
+#include <dlfcn.h>
 #include <curl/curl.h>
 
 #include <module.h>
+
+/* {{{ Subsystem initialization */
+
+/* https://gcc.gnu.org/onlinedocs/gcc/Alternate-Keywords.html */
+#ifndef __GNUC__
+#define __typeof__ typeof
+#endif
+
+/*
+ * There are libcurl functions that allow arguments of different
+ * types depending on previous arguments (like printf()). They are
+ * accompanied with the same named macros for type checking.
+ *
+ * See ${PREFIX}/include/curl/typecheck-gcc.h
+ *
+ * Undefine those macros to eliminate macro redefinition warnings.
+ */
+#undef curl_easy_getinfo
+#undef curl_easy_setopt
+
+/*
+ * Storage for libcurl function pointers.
+ */
+#define define_func_ptr(func)		\
+	static __typeof__(func) *func##_ptr;
+define_func_ptr(curl_easy_cleanup)
+define_func_ptr(curl_easy_getinfo)
+define_func_ptr(curl_easy_init)
+define_func_ptr(curl_easy_perform)
+define_func_ptr(curl_easy_setopt)
+define_func_ptr(curl_easy_strerror)
+define_func_ptr(curl_slist_append)
+define_func_ptr(curl_slist_free_all)
+#undef define_func_ptr
+
+/* Macros for calling libcurl functions as usual in the code. */
+#define curl_easy_cleanup	curl_easy_cleanup_ptr
+#define curl_easy_getinfo	curl_easy_getinfo_ptr
+#define curl_easy_init		curl_easy_init_ptr
+#define curl_easy_perform	curl_easy_perform_ptr
+#define curl_easy_setopt	curl_easy_setopt_ptr
+#define curl_easy_strerror	curl_easy_strerror_ptr
+#define curl_slist_append	curl_slist_append_ptr
+#define curl_slist_free_all	curl_slist_free_all_ptr
+
+/* dlopen() handle. Saved to call dlclose(). */
+static void *libcurl_handle;
+
+/*
+ * Set <...>_ptr using dlsym() call.
+ *
+ * Return -1 from the function that uses the macro on error (and
+ * set an error into the diagnostics area).
+ */
+#define load_func(libname, dlopen_handle, func) do {				\
+	func##_ptr = dlsym((dlopen_handle), #func);				\
+	if (func##_ptr == NULL) {						\
+		box_error_set(__FILE__, __LINE__, ER_SYSTEM,			\
+			      "Unable to load symbol %s from %s", #func,	\
+			      libname);						\
+		return -1;							\
+	}									\
+} while(0)
+
+static int
+bind_libcurl_functions(const char *libname, void *libcurl_handle)
+{
+	load_func(libname, libcurl_handle, curl_easy_cleanup);
+	load_func(libname, libcurl_handle, curl_easy_getinfo);
+	load_func(libname, libcurl_handle, curl_easy_init);
+	load_func(libname, libcurl_handle, curl_easy_perform);
+	load_func(libname, libcurl_handle, curl_easy_setopt);
+	load_func(libname, libcurl_handle, curl_easy_strerror);
+	load_func(libname, libcurl_handle, curl_slist_append);
+	load_func(libname, libcurl_handle, curl_slist_free_all);
+
+	return 0;
+}
+
+#undef load_func
+
+int
+smtpc_init(void)
+{
+	const char *libname;
+#ifdef __APPLE__
+	libname = "libcurl.dylib";
+#else
+	libname = "libcurl.so";
+#endif
+
+	int flags = RTLD_NOW | RTLD_LOCAL;
+	/*
+	 * RTLD_DEEPBIND is necessary on Linux and FreeBSD to bind
+	 * libcurl.so dynamic relocations to the same library
+	 * instead of tarantool executable (that also may offer
+	 * those symbols). See the large explanation in
+	 * smtp/CMakeLists.txt.
+	 *
+	 * dlopen() on Mac OS provides RTLD_DEEPBIND behaviour by
+	 * default and there is no such flag.
+	 *
+	 * Don't know about other OSes.
+	 */
+#ifdef RTLD_DEEPBIND
+	flags |= RTLD_DEEPBIND;
+#endif
+	libcurl_handle = dlopen(libname, flags);
+	if (libcurl_handle == NULL) {
+		box_error_set(__FILE__, __LINE__, ER_SYSTEM,
+			      "Unable to load %s", libname);
+		return -1;
+	}
+
+	if (bind_libcurl_functions(libname, libcurl_handle) != 0)
+		return -1;
+
+	return 0;
+}
+
+/* Subsystem initialization }}} */
 
 int
 smtpc_env_create(struct smtpc_env *env)
