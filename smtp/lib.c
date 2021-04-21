@@ -280,6 +280,9 @@ static const struct luaL_Reg Client[] = {
 LUA_API int
 luaopen_smtp_lib(lua_State *L)
 {
+	if (smtpc_init() != 0)
+		return luaT_error(L);
+
 	luaL_newmetatable(L, DRIVER_LUA_UDATA_NAME);
 	lua_pushvalue(L, -1);
 	lua_setfield(L, -2, "__index");

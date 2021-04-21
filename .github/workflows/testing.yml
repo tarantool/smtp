@@ -20,9 +20,6 @@ jobs:
       fail-fast: false
       matrix:
         tarantool:
-          # gh-29: 2.5.{1,2,3}, 2.6.{1,2} and 2.7.1 are disabled
-          # due to symbol names clash and lack of smtp(s) support
-          # in tarantool's bundled libcurl.
           - release/1.10.7
           - release/1.10.8
           - release/1.10.9
@@ -30,13 +27,13 @@ jobs:
           - release/2.4.1
           - release/2.4.2
           - release/2.4.3
-          # - release/2.5.1
-          # - release/2.5.2
-          # - release/2.5.3
-          # - release/2.6.1
-          # - release/2.6.2
+          - release/2.5.1
+          - release/2.5.2
+          - release/2.5.3
+          - release/2.6.1
+          - release/2.6.2
           - release/2.6.3
-          # - release/2.7.1
+          - release/2.7.1
           - release/2.7.2
           - release/2.8.1
           - live/1.10
@@ -127,13 +124,6 @@ jobs:
           - macos-10.15
           - macos-11.0
         tarantool:
-          # gh-29: 2.5.{1,2,3}, 2.6.{1,2} and 2.7.1 are disabled
-          # due to symbol names clash and lack of smtp(s) support
-          # in tarantool's bundled libcurl.
-          #
-          # Unlike source builds we have there, brew tarantool
-          # installation uses system's libcurl and is not affected
-          # by the problem.
           - brew
           - 1.10.7
           - 1.10.8
@@ -142,13 +132,13 @@ jobs:
           - 2.4.1
           - 2.4.2
           - 2.4.3
-          # - 2.5.1
-          # - 2.5.2
-          # - 2.5.3
-          # - 2.6.1
-          # - 2.6.2
+          - 2.5.1
+          - 2.5.2
+          - 2.5.3
+          - 2.6.1
+          - 2.6.2
           - 2.6.3
-          # - 2.7.1
+          - 2.7.1
           - 2.7.2
           - 2.8.1
           - master
