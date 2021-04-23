@@ -23,6 +23,15 @@ if(TARANTOOL_INCLUDE_DIR)
     unset(_config)
 endif()
 
+# Suppress CMake warning regarding different names of the
+# Find<...>.cmake module and the package name that is passed to
+# find_package_handle_standard_args(): Tarantool and TARANTOOL.
+# We prefer to use uppercase in variable names, so actually there
+# is nothing we want to change.
+#
+# https://cmake.org/cmake/help/latest/module/FindPackageHandleStandardArgs.html
+set(FPHSA_NAME_MISMATCHED 1)
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(TARANTOOL
     REQUIRED_VARS TARANTOOL_INCLUDE_DIR VERSION_VAR TARANTOOL_VERSION)
