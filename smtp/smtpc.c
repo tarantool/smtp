@@ -32,6 +32,7 @@
 #include "smtpc.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 #include <assert.h>
 #include <dlfcn.h>
@@ -71,6 +72,7 @@ define_func_ptr(curl_easy_setopt)
 define_func_ptr(curl_easy_strerror)
 define_func_ptr(curl_slist_append)
 define_func_ptr(curl_slist_free_all)
+define_func_ptr(curl_version_info)
 #undef define_func_ptr
 
 /* Macros for calling libcurl functions as usual in the code. */
@@ -82,9 +84,30 @@ define_func_ptr(curl_slist_free_all)
 #define curl_easy_strerror	curl_easy_strerror_ptr
 #define curl_slist_append	curl_slist_append_ptr
 #define curl_slist_free_all	curl_slist_free_all_ptr
+#define curl_version_info	curl_version_info_ptr
 
 /* dlopen() handle. Saved to call dlclose(). */
 static void *libcurl_handle;
+
+/**
+ * Check that given given protocol is supported according to
+ * given libcurl informational structure.
+ *
+ * Return 0 when the protocol is supported, -1 otherwise (and sets
+ * an error into the diagnostics area).
+ */
+static int
+check_libcurl_protocol(const char *libname, const curl_version_info_data *info,
+		       const char *protocol)
+{
+	for (const char * const *p = info->protocols; *p != NULL; ++p) {
+		if (strcmp(*p, protocol) == 0)
+			return 0;
+	}
+	box_error_set(__FILE__, __LINE__, ER_SYSTEM,
+		      "No %s protocol support in %s", protocol, libname);
+	return -1;
+}
 
 /*
  * Set <...>_ptr using dlsym() call.
@@ -113,6 +136,14 @@ bind_libcurl_functions(const char *libname, void *libcurl_handle)
 	load_func(libname, libcurl_handle, curl_easy_strerror);
 	load_func(libname, libcurl_handle, curl_slist_append);
 	load_func(libname, libcurl_handle, curl_slist_free_all);
+	load_func(libname, libcurl_handle, curl_version_info);
+
+	/* Verify that given libcurl supports smtp(s). */
+	curl_version_info_data *info = curl_version_info(7);
+	if (check_libcurl_protocol(libname, info, "smtp") != 0)
+		return -1;
+	if (check_libcurl_protocol(libname, info, "smtps") != 0)
+		return -1;
 
 	return 0;
 }
