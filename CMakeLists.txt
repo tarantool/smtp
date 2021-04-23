@@ -10,6 +10,18 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}" ${CMAKE_MODULE_PATH})
 # Find Tarantool and Lua dependecies
 set(TARANTOOL_FIND_REQUIRED ON)
 find_package(Tarantool)
+
+# Two directories are added into the header search paths:
+#
+# - ${TARANTOOL_DIR}${PREFIX}/include
+# - ${TARANTOOL_DIR}${PREFIX}/include/tarantool
+#
+# So `#include <curl/curl.h>` will prefer libcurl headers shipped
+# by tarantool packages if exists and will fallback to the system
+# ones otherwise.
+#
+# (`-I <dir>` directories are scanned before system ones as for
+# `#include "foo.h"` as well as for `#include <foo.h>`.)
 include_directories(${TARANTOOL_INCLUDE_DIRS})
 
 # Set CFLAGS
