@@ -153,12 +153,21 @@ bind_libcurl_functions(const char *libname, void *libcurl_handle)
 int
 smtpc_init(void)
 {
+	if (bind_libcurl_functions("[tarantool]", RTLD_DEFAULT) == 0)
+		return 0;
+
 	const char *libname;
 #ifdef __APPLE__
 	libname = "libcurl.dylib";
 #else
 	libname = "libcurl.so";
 #endif
+
+	/* Warn a user that we unable to use built-in libcurl. */
+	box_error_t *err = box_error_last();
+	const char *err_msg = box_error_message(err);
+	say_warn("%s", err_msg);
+	say_warn("Attempt to fallback to %s", libname);
 
 	int flags = RTLD_NOW | RTLD_LOCAL;
 	/*
@@ -186,6 +195,7 @@ smtpc_init(void)
 	if (bind_libcurl_functions(libname, libcurl_handle) != 0)
 		return -1;
 
+	say_warn("Successfully loaded %s", libname);
 	return 0;
 }
 

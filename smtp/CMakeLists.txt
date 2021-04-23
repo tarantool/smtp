@@ -2,6 +2,15 @@ if (APPLE)
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -undefined suppress -flat_namespace")
 endif(APPLE)
 
+if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+    # man 3 dlsym:
+    #
+    #  | The _GNU_SOURCE feature test macro must be defined in
+    #  | order to obtain the definitions of RTLD_DEFAULT and
+    #  | RTLD_NEXT from <dlfcn.h>.
+    add_definitions("-D_GNU_SOURCE")
+endif()
+
 # Add C library
 add_library(lib SHARED lib.c smtpc.c)
 
@@ -13,9 +22,9 @@ add_library(lib SHARED lib.c smtpc.c)
 # The reason why we must avoid dynamic linking with system's
 # libcurl is composition of several facts.
 #
-# The module uses system's libcurl.so, because libcurl symbols
-# that are exported from tarantool executable are not always
-# suitable for the module.
+# The module uses system's libcurl.so when libcurl symbols that
+# are exported from tarantool executable are not suitable for the
+# module, in particular:
 #
 # 1. There are tarantool releases that do not export libcurl
 #    symbols at all.
@@ -59,7 +68,8 @@ add_library(lib SHARED lib.c smtpc.c)
 # lib.so library starts to load. The dynamic linker find the
 # NEEDED entry with system's libcurl.so and loads it. The
 # libcurl.so library has dynamic relocations and they are resolved
-# to the executable's symbols. The module loads libcurl.so using
+# to the executable's symbols. The module checks executable's
+# symbols and, say, find them unsuitable. It loads libcurl.so using
 # dlopen() that just increases a reference counter of already
 # loaded library. The resolved dynamic relocations remain resolved
 # to the executable and the RTLD_DEEPBIND flag does not affect
@@ -85,8 +95,7 @@ add_library(lib SHARED lib.c smtpc.c)
 #    and so irrelevant here).
 # 2. Tarantool offers suitable libcurl implementation since
 #    1.10.10, 2.6.3, 2.7.2, 2.8.1 and in all 2.9+. The module
-#    will use the built-in libcurl when possible (it is not
-#    implemented yet, tracked by gh-24).
+#    uses the built-in libcurl when possible.
 #
 # [1]: https://github.com/tarantool/smtp/issues/29
 # [2]: https://github.com/tarantool/smtp/issues/24
