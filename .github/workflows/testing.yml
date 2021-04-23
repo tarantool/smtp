@@ -41,6 +41,20 @@ jobs:
           - live/2.7
           - live/2.8
           - live/2.9
+        # Add an extra check or modify a system environment
+        # on one job.
+        include:
+          # Applicable for: 2.6.3, 2.7.2+, 2.8.1+, 2.9+ (gh-4559).
+          #
+          # Verify that system's libcurl headers are not required.
+          - tarantool: live/2.8
+            dont_install_system_libcurl_header: true
+          # Applicable for: 2.6.3, 2.7.2+, 2.8.1+, 2.9+ (gh-4559).
+          #
+          # Verify that tarantool's libcurl headers are preferred
+          # when the system provides them too.
+          - tarantool: live/2.9
+            break_system_libcurl_header: true
 
     env:
       # Prevent packages like tzdata from asking configuration
@@ -99,6 +113,15 @@ jobs:
 
       - name: Install build dependencies for the module
         run: sudo apt-get install -y libcurl4-openssl-dev
+        if: '!matrix.dont_install_system_libcurl_header'
+
+      - name: Inject an error into system's curl/curl.h
+        run: |
+          # Note: It hardcodes known libcurl headers location on
+          # Ubuntu Focal.
+          CURL_H=/usr/include/x86_64-linux-gnu/curl/curl.h
+          echo '#error Deliberately broken from CI' | sudo tee "${CURL_H}"
+        if: matrix.break_system_libcurl_header
 
       - name: Clone the module
         uses: actions/checkout@v2
