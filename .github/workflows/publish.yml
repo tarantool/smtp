@@ -1,0 +1,36 @@
+name: publish
+
+on:
+  push:
+    branches: [master]
+    tags: ['*']
+
+jobs:
+  publish-scm-1:
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: tarantool/rocks.tarantool.org/github-action@master
+        with:
+          auth: ${{ secrets.ROCKS_AUTH }}
+          files: smtp-scm-1.rockspec
+
+  publish-tag:
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      # Make a release
+      - run: printf '%s=%s\n' TAG "${GITHUB_REF##*/}" >> "${GITHUB_ENV}"
+      - run: sed -E
+          -e "s/branch = '.+'/tag = '${{ env.TAG }}'/g"
+          -e "s/version = '.+'/version = '${{ env.TAG }}-1'/g"
+          smtp-scm-1.rockspec >> smtp-${{ env.TAG }}-1.rockspec
+
+      - uses: tarantool/rocks.tarantool.org/github-action@master
+        with:
+          auth: ${{ secrets.ROCKS_AUTH }}
+          files: |
+            smtp-${{ env.TAG }}-1.rockspec
