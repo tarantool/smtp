@@ -22,15 +22,41 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      # Make a release
+      # Create a rockspec for the release.
       - run: printf '%s=%s\n' TAG "${GITHUB_REF##*/}" >> "${GITHUB_ENV}"
       - run: sed -E
           -e "s/branch = '.+'/tag = '${{ env.TAG }}'/g"
           -e "s/version = '.+'/version = '${{ env.TAG }}-1'/g"
-          smtp-scm-1.rockspec >> smtp-${{ env.TAG }}-1.rockspec
+          smtp-scm-1.rockspec > smtp-${{ env.TAG }}-1.rockspec
 
+      # Create a source tarball for the release (.src.rock).
+      #
+      # `tarantoolctl rocks pack <rockspec>` creates a source
+      # tarball. It speeds up
+      # `tarantoolctl rocks install <module_name> <version>` and
+      # frees it from dependency on git.
+      #
+      # Important: Don't confuse this command with
+      # `tarantoolctl rocks pack <module_name> [<version>]`, which
+      # creates a **binary** rock or .all.rock (see [1]). Don't
+      # upload a binary rock of a Lua/C module to
+      # rocks.tarantool.org. Lua/C modules are platform dependent.
+      #
+      # A 'pure Lua' module is packed into the .all.rock tarball.
+      # Feel free to upload such rock to rocks.tarantool.org.
+      # Don't be confused by the 'pure Lua' words: usage of
+      # LuaJIT's FFI and tarantool specific features are okay.
+      #
+      # [1]: https://github.com/luarocks/luarocks/wiki/Types-of-rocks
+      - uses: tarantool/setup-tarantool@v1
+        with:
+          tarantool-version: '1.10'
+      - run: tarantoolctl rocks pack smtp-${{ env.TAG }}-1.rockspec
+
+      # Upload .rockspec and .src.rock.
       - uses: tarantool/rocks.tarantool.org/github-action@master
         with:
           auth: ${{ secrets.ROCKS_AUTH }}
           files: |
             smtp-${{ env.TAG }}-1.rockspec
+            smtp-${{ env.TAG }}-1.src.rock
