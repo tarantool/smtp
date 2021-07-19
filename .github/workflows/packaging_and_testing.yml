@@ -1,0 +1,359 @@
+name: packaging_and_testing
+
+on: [push, pull_request]
+
+jobs:
+  pack_rpm_deb_linux:
+
+    strategy:
+      fail-fast: false
+      matrix:
+        tarantool:
+          - release/1.10.10
+
+    env:
+      # Set as absolute paths to avoid any possible confusion
+      # after changing a current directory.
+      SMTP_SRCDIR: ${{ format('{0}/smtp', github.workspace) }}
+      PACKPACK_SRCDIR: ${{ format('{0}/smtp/packpack', github.workspace) }}
+      SRCDIR: ${{ format('{0}/{1}', github.workspace, github.repository) }}
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout master
+        uses: actions/checkout@v2
+        with:
+          path: ${{ env.SMTP_SRCDIR }}
+
+      - name: Checkout to packpack
+        uses: actions/checkout@v2
+        with:
+          repository: packpack/packpack
+          path: ${{ env.PACKPACK_SRCDIR }}
+
+      - name: Export T_* environment variables
+        run: |
+          # Split ${{ matrix.tarantool }}.
+          T="${{ matrix.tarantool }}"
+          T_KIND="${T%%/*}"
+          T_VERSION="${T##*/}"
+          if [ "${T_KIND}" = release ]; then
+              T_SERIES="${T_VERSION%.*}"
+          else
+              T_SERIES="${T_VERSION}"
+          fi
+
+          # Make the variables available for the next steps.
+          printf '%s=%s\n' T_KIND    "${T_KIND}"    >> "${GITHUB_ENV}"
+          printf '%s=%s\n' T_VERSION "${T_VERSION}" >> "${GITHUB_ENV}"
+          printf '%s=%s\n' T_SERIES  "${T_SERIES}"  >> "${GITHUB_ENV}"
+
+      - name: Setup tarantool ${{ env.T_SERIES }} repository
+        run: |
+          URL="https://tarantool.io/${T_KIND}/${T_SERIES}/installer.sh"
+          curl -fsSL "${URL}" > installer.sh
+          chmod a+x installer.sh
+          sudo ./installer.sh
+
+      - name: Install tarantool ${{ matrix.tarantool }}
+        run: |
+          # Install tarantool.
+          #
+          # We don't use tarantool/setup-tarantool GitHub Action
+          # at the moment due to several reasons:
+          #
+          # 1. No way to install a non-last tarantool version from
+          #    a repository:
+          #    https://github.com/tarantool/setup-tarantool/issues/15
+          # 2. No way to install a live package:
+          #    https://github.com/tarantool/setup-tarantool/issues/9
+          # 3. We likely will install tarantool in a container
+          #    job and it'll require support from the action side:
+          #    https://github.com/tarantool/setup-tarantool/issues/11
+          sudo apt-get install -y "tarantool=${T_VERSION}*" "tarantool-dev=${T_VERSION}*"
+
+      - name: Verify tarantool version
+        run: |
+          # Workaround https://github.com/tarantool/tarantool/issues/4983
+          # Workaround https://github.com/tarantool/tarantool/issues/5040
+          tarantool -e "require('fiber').sleep(0) assert(_TARANTOOL:startswith('${T_VERSION}'), _TARANTOOL) os.exit()"
+
+      - name: Install build dependencies for the module
+        run: sudo apt-get install -y libcurl4-openssl-dev
+
+      - name: Pack
+        run: |
+          cd "${SMTP_SRCDIR}"
+          for TYPE in rpm debian
+          do
+          echo "curl -L https://www.tarantool.io/release/1.10/installer.sh | sudo bash" > $TYPE/prebuild.sh
+          chmod 777 $TYPE/prebuild.sh
+          done
+          OS=ubuntu DIST=bionic ./packpack/packpack
+          DEB_PATH="${SMTP_SRCDIR}/build/$(ls build | grep "\.deb$")"
+          # Make the variables available for the next steps.
+          printf '%s=%s\n' DEB_PATH "${DEB_PATH}" >> "${GITHUB_ENV}"
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: package
+          path: ${{ env.DEB_PATH }}
+
+  test_rpm_deb_linux:
+    needs: [pack_rpm_deb_linux]
+    strategy:
+      fail-fast: false
+      matrix:
+        tarantool:
+          - release/1.10.10
+
+    container:
+      image: ubuntu:20.04
+
+    env:
+      # Prevent packages like tzdata from asking configuration
+      # parameters interactively.
+      # See https://github.com/packpack/packpack/issues/7
+      DEBIAN_FRONTEND: noninteractive
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Export T_* environment variables
+        run: |
+          # Split ${{ matrix.tarantool }}.
+          T="${{ matrix.tarantool }}"
+          T_KIND="${T%%/*}"
+          T_VERSION="${T##*/}"
+          if [ "${T_KIND}" = release ]; then
+              T_SERIES="${T_VERSION%.*}"
+          else
+              T_SERIES="${T_VERSION}"
+          fi
+
+          # Make the variables available for the next steps.
+          printf '%s=%s\n' T_KIND    "${T_KIND}"    >> "${GITHUB_ENV}"
+          printf '%s=%s\n' T_VERSION "${T_VERSION}" >> "${GITHUB_ENV}"
+          printf '%s=%s\n' T_SERIES  "${T_SERIES}"  >> "${GITHUB_ENV}"
+
+      - name: Setup tarantool ${{ env.T_SERIES }} repository
+        run: |
+          URL="https://tarantool.io/${T_KIND}/${T_SERIES}/installer.sh"
+          apt-get update -y && apt-get upgrade -y
+          apt-get install curl -y
+          curl -fsSL "${URL}" > installer.sh
+          chmod a+x installer.sh
+          ./installer.sh
+
+      - name: Install tarantool ${{ matrix.tarantool }}
+        run: |
+          # Install tarantool.
+          #
+          # We don't use tarantool/setup-tarantool GitHub Action
+          # at the moment due to several reasons:
+          #
+          # 1. No way to install a non-last tarantool version from
+          #    a repository:
+          #    https://github.com/tarantool/setup-tarantool/issues/15
+          # 2. No way to install a live package:
+          #    https://github.com/tarantool/setup-tarantool/issues/9
+          # 3. We likely will install tarantool in a container
+          #    job and it'll require support from the action side:
+          #    https://github.com/tarantool/setup-tarantool/issues/11
+          apt-get install -y "tarantool=${T_VERSION}*" "tarantool-dev=${T_VERSION}*"
+
+      - name: Download package
+        uses: actions/download-artifact@v2
+        with:
+          name: package
+
+      - name: Install package
+        run: |
+          NAME=$(ls | grep "\.deb$")
+          dpkg -i $NAME
+
+      - name: Checkout smtp
+        uses: actions/checkout@v2
+
+      - name: Run test
+        run: |
+          tarantool test/smtp.test.lua
+
+  # pack_rpm_deb_mac_os:
+
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       runs-on:
+  #         - macos-11.0
+  #       tarantool:
+  #         - brew
+  #         - release/1.10.10
+
+  #   env:
+  #     # Set as absolute paths to avoid any possible confusion
+  #     # after changing a current directory.
+  #     SMTP_SRCDIR: ${{ format('{0}/smtp', github.workspace) }}
+  #     PACKPACK_SRCDIR: ${{ format('{0}/smtp/packpack', github.workspace) }}
+  #     SRCDIR: ${{ format('{0}/{1}', github.workspace, github.repository) }}
+
+  #   runs-on: ${{ matrix.runs-on }}
+  #   steps:
+
+  #     - name: Checkout master
+  #       uses: actions/checkout@v2
+  #       with:
+  #         path: ${{ env.SMTP_SRCDIR }}
+
+  #     - name: Checkout to packpack
+  #       uses: actions/checkout@v2
+  #       with:
+  #         repository: packpack/packpack
+  #         path: ${{ env.PACKPACK_SRCDIR }}
+
+  #     - name: Install latest tarantool from brew
+  #       run: brew install tarantool
+  #       if: matrix.tarantool == 'brew'
+
+  #     - name: Cache built tarantool ${{ env.T_VERSION }}
+  #       uses: actions/cache@v2
+  #       id: cache
+  #       with:
+  #         path: ${{ env.T_DESTDIR }}
+  #         # v2 is due to https://github.com/actions/cache/issues/2
+  #         # and because the cache keys without -v2 may contain
+  #         # debug tarantool builds. It is desirable to have all
+  #         # build either debug or release (RelWithDebInfo), but
+  #         # we unable to build all releases in debug (see below).
+  #         key: ${{ matrix.runs-on }}-${{ matrix.tarantool }}-v2
+  #       if: matrix.tarantool != 'brew' && matrix.tarantool != 'master'
+
+  #     - name: Install tarantool build dependencies
+  #       run: brew install autoconf automake libtool
+  #       if: matrix.tarantool != 'brew' && steps.cache.outputs.cache-hit != 'true'
+
+  #     - name: Clone tarantool ${{ env.T_VERSION }}
+  #       uses: actions/checkout@v2
+  #       with:
+  #         repository: tarantool/tarantool
+  #         ref: ${{ env.T_VERSION }}
+  #         path: ${{ env.T_SRCDIR }}
+  #         submodules: true
+  #         # fetch-depth is 1 by default and it is okay for
+  #         # building from a tag. However we have master in
+  #         # the version list.
+  #         fetch-depth: 0
+  #       if: matrix.tarantool != 'brew' && steps.cache.outputs.cache-hit != 'true'
+
+  #     - name: Build tarantool ${{ env.T_VERSION }} from sources
+  #       run: |
+  #         mkdir "${T_DESTDIR}"
+  #         cd "${T_SRCDIR}"
+  #         # Set RelWithDebInfo just to disable -Werror.
+  #         #
+  #         # There are tarantool releases on which AppleClang
+  #         # complains about the problem that was fixed later in
+  #         # https://github.com/tarantool/tarantool/commit/7e8688ff8885cc7813d12225e03694eb8886de29
+  #         cmake . -DCMAKE_BUILD_TYPE=RelWithDebInfo
+  #         make -j$(sysctl -n hw.logicalcpu)
+  #         make DESTDIR="${T_DESTDIR}" install
+  #       if: matrix.tarantool != 'brew' && steps.cache.outputs.cache-hit != 'true'
+
+  #     - name: Pack
+  #       run: |
+  #         cd "${SMTP_SRCDIR}"
+  #         for TYPE in rpm debian
+  #         do
+  #         echo "curl -L https://www.tarantool.io/release/1.10/installer.sh | sudo bash" > $TYPE/prebuild.sh
+  #         chmod 777 $TYPE/prebuild.sh
+  #         done
+  #         OS=el DIST=8 ./packpack/packpack
+  #         DEB_PATH="${SMTP_SRCDIR}/build/$(ls build | grep "\.deb$")"
+  #         # Make the variables available for the next steps.
+  #         printf '%s=%s\n' DEB_PATH "${DEB_PATH}" >> "${GITHUB_ENV}"
+
+  #     - uses: actions/upload-artifact@v2
+  #       with:
+  #         name: package
+  #         path: ${{ env.DEB_PATH }}
+
+  # test_rpm_deb_mac_os:
+  #   needs: [pack_rpm_deb_mac_os]
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       runs-on:
+  #         - macos-11.0
+  #       tarantool:
+  #         - brew
+  #         - release/1.10.10
+
+  #   container:
+  #     image: ubuntu:20.04
+
+  #   env:
+  #     # Prevent packages like tzdata from asking configuration
+  #     # parameters interactively.
+  #     # See https://github.com/packpack/packpack/issues/7
+  #     DEBIAN_FRONTEND: noninteractive
+
+  #   runs-on: ${{ matrix.runs-on }}
+  #   steps:
+  #     - name: Export T_* environment variables
+  #       run: |
+  #         # Split ${{ matrix.tarantool }}.
+  #         T="${{ matrix.tarantool }}"
+  #         T_KIND="${T%%/*}"
+  #         T_VERSION="${T##*/}"
+  #         if [ "${T_KIND}" = release ]; then
+  #             T_SERIES="${T_VERSION%.*}"
+  #         else
+  #             T_SERIES="${T_VERSION}"
+  #         fi
+
+  #         # Make the variables available for the next steps.
+  #         printf '%s=%s\n' T_KIND    "${T_KIND}"    >> "${GITHUB_ENV}"
+  #         printf '%s=%s\n' T_VERSION "${T_VERSION}" >> "${GITHUB_ENV}"
+  #         printf '%s=%s\n' T_SERIES  "${T_SERIES}"  >> "${GITHUB_ENV}"
+
+  #     - name: Setup tarantool ${{ env.T_SERIES }} repository
+  #       run: |
+  #         URL="https://tarantool.io/${T_KIND}/${T_SERIES}/installer.sh"
+  #         apt-get update -y && apt-get upgrade -y
+  #         apt-get install curl -y
+  #         curl -fsSL "${URL}" > installer.sh
+  #         chmod a+x installer.sh
+  #         ./installer.sh
+
+  #     - name: Install tarantool ${{ matrix.tarantool }}
+  #       run: |
+  #         # Install tarantool.
+  #         #
+  #         # We don't use tarantool/setup-tarantool GitHub Action
+  #         # at the moment due to several reasons:
+  #         #
+  #         # 1. No way to install a non-last tarantool version from
+  #         #    a repository:
+  #         #    https://github.com/tarantool/setup-tarantool/issues/15
+  #         # 2. No way to install a live package:
+  #         #    https://github.com/tarantool/setup-tarantool/issues/9
+  #         # 3. We likely will install tarantool in a container
+  #         #    job and it'll require support from the action side:
+  #         #    https://github.com/tarantool/setup-tarantool/issues/11
+  #         apt-get install -y "tarantool=${T_VERSION}*" "tarantool-dev=${T_VERSION}*"
+
+  #     - name: Download package
+  #       uses: actions/download-artifact@v2
+  #       with:
+  #         name: package
+
+  #     - name: Install package
+  #       run: |
+  #         NAME=$(ls | grep "\.deb$")
+  #         dpkg -i $NAME
+
+  #     - name: Checkout smtp
+  #       uses: actions/checkout@v2
+
+  #     - name: Run test
+  #       run: |
+  #         tarantool test/smtp.test.lua
