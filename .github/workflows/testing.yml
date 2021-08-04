@@ -192,7 +192,10 @@ jobs:
           # debug tarantool builds. It is desirable to have all
           # build either debug or release (RelWithDebInfo), but
           # we unable to build all releases in debug (see below).
-          key: ${{ matrix.runs-on }}-${{ matrix.tarantool }}-v2
+          #
+          # v3 is to re-verify all Mac OS builds after fix for the
+          # gh-6076 problem (see below).
+          key: ${{ matrix.runs-on }}-${{ matrix.tarantool }}-v3
         if: matrix.tarantool != 'brew' && matrix.tarantool != 'master'
 
       - name: Install tarantool build dependencies
@@ -222,6 +225,36 @@ jobs:
           # complains about the problem that was fixed later in
           # https://github.com/tarantool/tarantool/commit/7e8688ff8885cc7813d12225e03694eb8886de29
           cmake . -DCMAKE_BUILD_TYPE=RelWithDebInfo
+
+          # {{{ Workaround Mac OS build failure (gh-6076)
+          #
+          # https://github.com/tarantool/tarantool/issues/6076
+          #
+          # In brief: when "src/lib/small" is in include paths,
+          # `#include <version>` from inside Mac OS SDK headers
+          # attempts to include "src/lib/small/VERSION" as a
+          # header file that leads to a syntax error.
+          #
+          # It was fixed in the following commits:
+          #
+          # * 1.10.10-24-g7bce4abd1
+          # * 2.7.2-44-gbb1d32903
+          # * 2.8.1-56-ga6c29c5af
+          # * 2.9.0-84-gc5ae543f3
+          #
+          # However applying the workaround for all versions looks
+          # harmless.
+          #
+          # Added -f just in case: I guess we'll drop this useless
+          # obsoleted VERSION file from the git repository sooner
+          # or later.
+          rm -f src/lib/small/VERSION
+          # The same as above, but for the VERSION file generated
+          # by tarantool's CMake script.
+          rm VERSION
+          # }}} Workaround Mac OS build failure (gh-6076)
+
+          # Continue the build.
           make -j$(sysctl -n hw.logicalcpu)
           make DESTDIR="${T_DESTDIR}" install
         if: matrix.tarantool != 'brew' && steps.cache.outputs.cache-hit != 'true'
