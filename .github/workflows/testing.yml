@@ -55,6 +55,10 @@ jobs:
           # when the system provides them too.
           - tarantool: live/2.9
             break_system_libcurl_header: true
+          - tarantool: live/1.10
+            test_rocks: true
+          - tarantool: release/2.8.1
+            test_rocks: true
 
     env:
       # Prevent packages like tzdata from asking configuration
@@ -126,11 +130,17 @@ jobs:
       - name: Clone the module
         uses: actions/checkout@v2
 
-      - name: Build the module
-        run: cmake . && make
+      - name: Build the module and run tests
+        run: |
+          cmake . && make
+          make check
+        if: '!matrix.test_rocks'
 
-      - name: Run tests
-        run: make check
+      - name: Build the module and run tests (rocks)
+        run: |
+          tarantoolctl rocks make
+          make -C build.rocks/ ARGS=-VV check
+        if: matrix.test_rocks
 
   testing_mac_os:
     # We want to run on external PRs, but not on our own internal
