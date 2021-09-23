@@ -446,7 +446,7 @@ smtpc_execute(struct smtpc_request *req, double timeout)
 		{
 		char error_msg[CURL_ERROR_SIZE];
 		snprintf(error_msg, sizeof(error_msg), "SMTP error: %s", curl_error);
-		req->reason = error_msg;
+		req->reason = (const char *)strndup(error_msg, CURL_ERROR_SIZE);
 		req->status = -1;
 		++env->stat.failed_requests;
 		}
