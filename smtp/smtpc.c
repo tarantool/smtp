@@ -378,6 +378,7 @@ smtpc_task_execute(va_list list)
 int
 smtpc_execute(struct smtpc_request *req, double timeout)
 {
+	char curl_error[CURL_ERROR_SIZE];
 	struct smtpc_env *env = req->env;
 
 	curl_easy_setopt(req->easy, CURLOPT_PRIVATE,
@@ -390,6 +391,7 @@ smtpc_execute(struct smtpc_request *req, double timeout)
 	curl_easy_setopt(req->easy, CURLOPT_MAIL_RCPT,
 			 req->recipients);
 	curl_easy_setopt(req->easy, CURLOPT_TIMEOUT, (long)timeout);
+	curl_easy_setopt(req->easy, CURLOPT_ERRORBUFFER, curl_error);
 
 	++env->stat.total_requests;
 	++env->stat.active_requests;
@@ -440,6 +442,15 @@ smtpc_execute(struct smtpc_request *req, double timeout)
 		++env->stat.failed_requests;
 		smtpc_request_delete(req);
 		return -1;
+        case CURLE_SEND_ERROR:
+		{
+		char error_msg[CURL_ERROR_SIZE];
+		snprintf(error_msg, sizeof(error_msg), "SMTP error: %s", curl_error);
+		req->reason = error_msg;
+		req->status = -1;
+		++env->stat.failed_requests;
+		}
+		break;
 	default: {
 		char error_msg[256];
 		curl_easy_getinfo(req->easy, CURLINFO_OS_ERRNO, &longval);
