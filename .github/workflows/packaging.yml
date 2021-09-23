@@ -1,0 +1,173 @@
+name: packaging
+
+on: [push, pull_request]
+
+jobs:
+  build_package:
+    # Skip pull request jobs when the source branch is in the same
+    # repository.
+    if: |
+      github.event_name == 'push' ||
+      github.event.pull_request.head.repo.full_name != github.repository
+
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - {os: debian, dist: bullseye}
+          - {os: ubuntu, dist: focal}
+          - {os: centos, dist: 7}
+          - {os: centos, dist: 8}
+          - {os: fedora, dist: 34}
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone the module
+        uses: actions/checkout@v2
+        with:
+          # fetch-depth is 1 by default and it is okay for
+          # building from a tag. However it is convenient to
+          # have correct version for builds between tags too.
+          fetch-depth: 0
+
+      - name: Clone packpack
+        uses: actions/checkout@v2
+        with:
+          repository: packpack/packpack
+          path: packpack
+
+      - name: Build the package
+        run: |
+          export OS=${{ matrix.platform.os }}
+          export DIST=${{ matrix.platform.dist }}
+          ./packpack/packpack
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ format('{0}-{1}', matrix.platform.os, matrix.platform.dist) }}
+          path: build
+          retention-days: 21
+
+  test_package:
+    # Skip pull request jobs when the source branch is in the same
+    # repository.
+    if: |
+      github.event_name == 'push' ||
+      github.event.pull_request.head.repo.full_name != github.repository
+
+    needs: [build_package]
+
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - {os: debian, dist: bullseye}
+          - {os: ubuntu, dist: focal}
+          - {os: centos, dist: 7}
+          - {os: centos, dist: 8}
+          - {os: fedora, dist: 34}
+        tarantool:
+          # Verify on oldest and newest tarantool versions.
+          #
+          # It is important to verify both cases: when the module
+          # uses the libcurl implementation provided by tarantool
+          # executable and when the module falls back to the
+          # system libcurl.
+          #
+          # TODO: Enable 1.10.7 jobs after resolving gh-44
+          # ('Unable to load libcurl.so'). Don't forget to exclude
+          # distribution versions, which are not supported by
+          # tarantool 1.10.7.
+          # - release/1.10.7
+          - live/2.9
+
+    env:
+      # Prevent packages like tzdata from asking configuration
+      # parameters interactively.
+      # See https://github.com/packpack/packpack/issues/7
+      DEBIAN_FRONTEND: noninteractive
+
+    runs-on: ubuntu-latest
+    container: ${{ format('{0}:{1}', matrix.platform.os, matrix.platform.dist) }}
+    steps:
+      # {{{ Install tarantool
+
+      - name: Export T_* environment variables
+        run: |
+          # Split ${{ matrix.tarantool }}.
+          T="${{ matrix.tarantool }}"
+          T_KIND="${T%%/*}"
+          T_VERSION="${T##*/}"
+          if [ "${T_KIND}" = release ]; then
+              T_SERIES="${T_VERSION%.*}"
+          else
+              T_SERIES="${T_VERSION}"
+          fi
+
+          # Make the variables available for the next steps.
+          printf '%s=%s\n' T_KIND    "${T_KIND}"    >> "${GITHUB_ENV}"
+          printf '%s=%s\n' T_VERSION "${T_VERSION}" >> "${GITHUB_ENV}"
+          printf '%s=%s\n' T_SERIES  "${T_SERIES}"  >> "${GITHUB_ENV}"
+
+      - name: Install requirements (Debian/Ubuntu)
+        run: |
+          apt-get update -y
+          apt-get install -y curl
+        if: matrix.platform.os == 'debian' || matrix.platform.os == 'ubuntu'
+
+      - name: Setup tarantool ${{ env.T_SERIES }} repository
+        run: |
+          URL="https://tarantool.io/${T_KIND}/${T_SERIES}/installer.sh"
+          curl -fsSL "${URL}" > installer.sh
+          chmod a+x installer.sh
+          ./installer.sh
+
+      - name: Install tarantool ${{ matrix.tarantool }} (CentOS/Fedora)
+        run: yum install -y "tarantool-${T_VERSION}*"
+        if: matrix.platform.os == 'centos' || matrix.platform.os == 'fedora'
+
+      - name: Install tarantool ${{ matrix.tarantool }} (Debian/Ubuntu)
+        run: apt-get install -y "tarantool=${T_VERSION}*"
+        if: matrix.platform.os == 'debian' || matrix.platform.os == 'ubuntu'
+
+      - name: Verify tarantool version
+        run: |
+          # Workaround https://github.com/tarantool/tarantool/issues/4983
+          # Workaround https://github.com/tarantool/tarantool/issues/5040
+          tarantool -e "require('fiber').sleep(0) assert(_TARANTOOL:startswith('${T_VERSION}'), _TARANTOOL) os.exit()"
+
+      # }}} Install tarantool
+
+      - name: Download the module package
+        uses: actions/download-artifact@v2
+        with:
+          name: ${{ format('{0}-{1}', matrix.platform.os, matrix.platform.dist) }}
+
+      - name: Install the module from the package (CentOS/Fedora)
+        run: |
+          # Install all dependencies of the package and the
+          # package itself.
+          #
+          # ${ARCH} is not strictly necessary here, just for
+          # equivalence with the Debian/Ubuntu step.
+          ARCH=$(rpm --eval '%{_arch}')
+          yum install -y *.${ARCH}.rpm
+        if: matrix.platform.os == 'centos' || matrix.platform.os == 'fedora'
+
+      - name: Install the module from the package (Debian/Ubuntu)
+        run: |
+          # TODO: Install dependencies of the package.
+          #
+          # Now we're lucky: all dependencies are already there.
+          #
+          # Trick: ${ARCH} is to filter out the source package.
+          ARCH=$(dpkg --print-architecture)
+          dpkg -i *_${ARCH}.deb
+        if: matrix.platform.os == 'debian' || matrix.platform.os == 'ubuntu'
+
+      - name: Clone the module
+        uses: actions/checkout@v2
+
+      - name: Run tests
+        run: |
+          tarantool test/smtp.test.lua
