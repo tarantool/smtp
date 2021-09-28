@@ -29,11 +29,7 @@ local function smtp_h(s)
             s:write('250 OK\r\n')
         elseif l:find('RCPT TO:') then
             mail.rcpt[#mail.rcpt + 1] = l:sub(9):sub(1, -3)
-	    if l:find('unexisting') then
-                s:write('510 Bad email address\r\n')
-            else
-                s:write('250 OK\r\n')
-            end
+            s:write('250 OK\r\n')
         elseif l == 'DATA\r\n' then
             s:write('354 Enter message, ending with "." on a line by itself\r\n')
             while true do
@@ -60,7 +56,7 @@ local server = socket.tcp_server('127.0.0.1', 0, smtp_h)
 local addr = 'smtp://127.0.0.1:' .. server:name().port
 
 test:test("smtp.client", function(test)
-    test:plan(11)
+    test:plan(10)
     local r
     local m
 
@@ -150,11 +146,6 @@ test:test("smtp.client", function(test)
                   m.text,
                   "Subject: =%?utf%-8%?b%?YWJjZGVmZ2hpamvRj2xtbm9wcXJzdHV2d3h5eg==%?=", ""))
     test:is(subj, 1, 'subject codes >127')
-
-    r = client:request(addr, 'sender@tarantool.org',
-                       'unexisting@tarantool.org',
-                       'mail.body')
-    test:is(r.reason, 'SMTP error: RCPT failed: 510', 'unexisting recipient')
 end)
 
 os.exit(test:check() == true and 0 or -1)
