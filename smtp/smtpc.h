@@ -116,6 +116,7 @@ struct smtpc_request {
 	int status;
 	/** Error message. */
 	const char *reason;
+	char *curl_error;
 };
 
 /**

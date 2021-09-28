@@ -250,8 +250,17 @@ smtpc_request_new(struct smtpc_env *env, const char *url, const char *from)
 			      "Can't alloc curl handle");
 		return NULL;
 	}
+
+	req->curl_error = (char *) malloc(CURL_ERROR_SIZE);
+	if (req->curl_error == NULL) {
+		free(req);
+		box_error_set(__FILE__, __LINE__, ER_MEMORY_ISSUE,
+					  "Can't alloc curl buffer for error message");
+		return NULL;
+	}
 	curl_easy_setopt(req->easy, CURLOPT_URL, url);
 	curl_easy_setopt(req->easy, CURLOPT_MAIL_FROM, from);
+	curl_easy_setopt(req->easy, CURLOPT_ERRORBUFFER, req->curl_error);
 
 	return req;
 }
@@ -260,6 +269,9 @@ static long int
 smtpc_task_delete(va_list list)
 {
 	struct smtpc_request *req = va_arg(list, struct smtpc_request *);
+	if (req->curl_error != NULL) {
+		free(req->curl_error);
+	}
 	curl_easy_cleanup(req->easy);
 	return 0;
 }
@@ -438,8 +450,16 @@ smtpc_execute(struct smtpc_request *req, double timeout)
 		box_error_set(__FILE__, __LINE__, ER_MEMORY_ISSUE,
 			      "Curl internal memory issue");
 		++env->stat.failed_requests;
+		free(req->curl_error);
 		smtpc_request_delete(req);
 		return -1;
+
+	case CURLE_RECV_ERROR:
+	case CURLE_SEND_ERROR:
+		req->reason = req->curl_error;
+		req->status = -1;
+		++env->stat.failed_requests;
+		break;
 	default: {
 		char error_msg[256];
 		curl_easy_getinfo(req->easy, CURLINFO_OS_ERRNO, &longval);

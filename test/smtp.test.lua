@@ -29,7 +29,20 @@ local function smtp_h(s)
             s:write('250 OK\r\n')
         elseif l:find('RCPT TO:') then
             mail.rcpt[#mail.rcpt + 1] = l:sub(9):sub(1, -3)
-            s:write('250 OK\r\n')
+            if l:find('3xx') then
+                s:write('354 Start mail input\r\n')
+            elseif l:find('4xx') then
+                s:write('421 Service not available, closing transmission channel\r\n')
+            elseif l:find('5xx') then
+                s:write('510 Bad email address\r\n')
+            elseif l:find('10xx') then
+                s:write('1000 Some unexpected error\r\n')
+                return
+            elseif l:find('timeout') then
+                s:write('1000 timeout error\r\n')
+            else
+                s:write('250 OK\r\n')
+            end
         elseif l == 'DATA\r\n' then
             s:write('354 Enter message, ending with "." on a line by itself\r\n')
             while true do
@@ -46,6 +59,7 @@ local function smtp_h(s)
             return
         elseif l ~= nil then
             s:write('502 Not implemented')
+            return
         else
             return
         end
@@ -56,7 +70,7 @@ local server = socket.tcp_server('127.0.0.1', 0, smtp_h)
 local addr = 'smtp://127.0.0.1:' .. server:name().port
 
 test:test("smtp.client", function(test)
-    test:plan(10)
+    test:plan(15)
     local r
     local m
 
@@ -146,6 +160,31 @@ test:test("smtp.client", function(test)
                   m.text,
                   "Subject: =%?utf%-8%?b%?YWJjZGVmZ2hpamvRj2xtbm9wcXJzdHV2d3h5eg==%?=", ""))
     test:is(subj, 1, 'subject codes >127')
+
+    r = client:request(addr, 'sender@tarantool.org',
+                       '3xx@tarantool.org',
+                       'mail.body')
+    test:is(r.reason, 'RCPT failed: 354', 'Errors 3xx')
+
+    r = client:request(addr, 'sender@tarantool.org',
+            '4xx@tarantool.org',
+            'mail.body')
+    test:is(r.reason, 'RCPT failed: 421', 'service unavailable')
+
+    r = client:request(addr, 'sender@tarantool.org',
+            '5xx@tarantool.org',
+            'mail.body')
+    test:is(r.reason, 'RCPT failed: 510', 'unexisting recipient')
+
+    r = client:request(addr, 'sender@tarantool.org',
+            '10xx@tarantool.org',
+            'mail.body')
+    test:is(r.reason, 'response reading failed', 'unexpected error - disconnect')
+
+    r = client:request(addr, 'sender@tarantool.org',
+            'timeout@tarantool.org',
+            'mail.body', {timeout = 1})
+    test:is(r.reason, 'Timeout was reached', 'timeout')
 end)
 
 os.exit(test:check() == true and 0 or -1)
