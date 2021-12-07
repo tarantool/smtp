@@ -73,13 +73,15 @@ jobs:
           # uses the libcurl implementation provided by tarantool
           # executable and when the module falls back to the
           # system libcurl.
-          #
-          # TODO: Enable 1.10.7 jobs after resolving gh-44
-          # ('Unable to load libcurl.so'). Don't forget to exclude
-          # distribution versions, which are not supported by
-          # tarantool 1.10.7.
-          # - release/1.10.7
+          - release/1.10.7
           - live/2.9
+        exclude:
+          # Tarantool 1.10.7 release is not supported on
+          # debian:bullseye and fedora:34.
+          - platform: {os: debian, dist: bullseye}
+            tarantool: release/1.10.7
+          - platform: {os: fedora, dist: 34}
+            tarantool: release/1.10.7
 
     env:
       # Prevent packages like tzdata from asking configuration
