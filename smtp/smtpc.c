@@ -158,9 +158,9 @@ smtpc_init(void)
 
 	const char *libname;
 #ifdef __APPLE__
-	libname = "libcurl.dylib";
+	libname = "libcurl.4.dylib";
 #else
-	libname = "libcurl.so";
+	libname = "libcurl.so.4";
 #endif
 
 	/* Warn a user that we unable to use built-in libcurl. */
