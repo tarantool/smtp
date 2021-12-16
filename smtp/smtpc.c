@@ -241,6 +241,14 @@ smtpc_request_new(struct smtpc_env *env, const char *url, const char *from)
 		return NULL;
 	}
 	memset(req, 0, sizeof(*req));
+
+	req->error_buf = calloc(CURL_ERROR_SIZE, sizeof(char));
+	if (req->error_buf == NULL) {
+		free(req);
+		box_error_set(__FILE__, __LINE__, ER_MEMORY_ISSUE,
+					  "Can't alloc error message buffer");
+		return NULL;
+	}
 	req->env = env;
 
 	req->easy = curl_easy_init();
@@ -252,6 +260,7 @@ smtpc_request_new(struct smtpc_env *env, const char *url, const char *from)
 	}
 	curl_easy_setopt(req->easy, CURLOPT_URL, url);
 	curl_easy_setopt(req->easy, CURLOPT_MAIL_FROM, from);
+	curl_easy_setopt(req->easy, CURLOPT_ERRORBUFFER, req->error_buf);
 
 	return req;
 }
@@ -270,6 +279,7 @@ smtpc_request_delete(struct smtpc_request *req)
 	if (req->easy != NULL)
 		coio_call(smtpc_task_delete, req);
 	free(req->body);
+	free(req->error_buf);
 	if (req->recipients)
 		curl_slist_free_all(req->recipients);
 
@@ -440,10 +450,26 @@ smtpc_execute(struct smtpc_request *req, double timeout)
 		++env->stat.failed_requests;
 		smtpc_request_delete(req);
 		return -1;
+	case CURLE_SEND_ERROR:
+	case CURLE_RECV_ERROR:
+		curl_easy_getinfo(req->easy, CURLINFO_RESPONSE_CODE, &longval);
+		req->status = (int) longval;
+		/*
+		 * When client can not read bytes from another side that
+		 * leads to a message about failed response reading but
+		 * response code stays 250, that is not correct. See
+		 * https://github.com/curl/curl/issues/8356
+		 */
+		if (strcmp(req->error_buf, "response reading failed") == 0) {
+			req->status = -1;
+		}
+		req->reason = req->error_buf;
+		++env->stat.failed_requests;
+		break;
 	default: {
 		char error_msg[256];
 		curl_easy_getinfo(req->easy, CURLINFO_OS_ERRNO, &longval);
-		snprintf(error_msg, sizeof(error_msg), "SMTP error %i (os errno %li)", req->code, longval);
+		snprintf(error_msg, sizeof(error_msg), "CURL error %i (os errno %li)", req->code, longval);
 		box_error_set(__FILE__, __LINE__, ER_UNKNOWN, error_msg);
 		++env->stat.failed_requests;
 		smtpc_request_delete(req);
