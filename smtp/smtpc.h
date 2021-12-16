@@ -112,10 +112,27 @@ struct smtpc_request {
 	int body_size;
 	/** Buffer read position. */
 	char *body_rpos;
-	/** SMTP status code. */
+	/**
+	 * SMTP status code.
+	 * It takes the value of -1 if there is some problem,
+	 * which is not related to SMTP, like connection error.
+	 */
 	int status;
-	/** Error message. */
+	/**
+	 * Error message.
+	 * It is a string to report details of an error to a user.
+	 * Does not require freeing.
+	 * It is never NULL if smtpc_execute() returns zero.
+	 */
 	const char *reason;
+	/**
+	 * Error buffer for receiving messages.
+	 * It should exist during a request lifetime and
+	 * must be freed at freeing the request structure.
+	 * This field is not for reading directly, cause
+	 * reason field points to it, when appropriate.
+	 */
+	char *error_buf;
 };
 
 /**

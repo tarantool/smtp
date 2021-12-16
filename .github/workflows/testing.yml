@@ -194,7 +194,10 @@ jobs:
           #
           # v3 is to re-verify all Mac OS builds after fix for the
           # gh-6076 problem (see below).
-          key: ${{ matrix.runs-on }}-${{ matrix.tarantool }}-v3
+          #
+          # v4 added due to inability to clear the cache after v3 prefix.
+          # See https://github.com/github/docs/issues/14145
+          key: ${{ matrix.runs-on }}-${{ matrix.tarantool }}-v4
         if: matrix.tarantool != 'brew' && matrix.tarantool != 'master'
 
       - name: Install tarantool build dependencies
