@@ -214,6 +214,13 @@ jobs:
           fetch-depth: 0
         if: matrix.tarantool != 'brew' && steps.cache.outputs.cache-hit != 'true'
 
+      - name: Patching tarantool for successful build
+        run: |
+          # These steps fix the problem with tarantool build described in
+          # https://github.com/tarantool/tarantool/issues/6576
+          git show 11e87877df9001a4972019328592d79d55d1bb01 | patch -p1
+        if: matrix.tarantool != 'brew' && steps.cache.outputs.cache-hit != 'true'
+
       - name: Build tarantool ${{ env.T_VERSION }} from sources
         run: |
           mkdir "${T_DESTDIR}"
@@ -224,7 +231,7 @@ jobs:
           # complains about the problem that was fixed later in
           # https://github.com/tarantool/tarantool/commit/7e8688ff8885cc7813d12225e03694eb8886de29
           #
-          # Set OpenSSL root directory for linking tarantool with OpenSSl of version 1.1
+          # Set OpenSSL root directory for linking tarantool with OpenSSL of version 1.1
           # This is related to #49. There are too much deprecations which affect the build and tests.
           # Must be revisited after fixing https://github.com/tarantool/tarantool/issues/6477
           cmake . -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOPENSSL_ROOT_DIR=/usr/local/opt/openssl@1.1 -DOPENSSL_LIBRARIES=/usr/local/opt/openssl@1.1/lib
