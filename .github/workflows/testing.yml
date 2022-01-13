@@ -216,10 +216,11 @@ jobs:
 
       - name: Patching tarantool for successful build
         run: |
+          cd "${T_SRCDIR}"
           # These steps fix the problem with tarantool build described in
           # https://github.com/tarantool/tarantool/issues/6576
-          git show 11e87877df9001a4972019328592d79d55d1bb01 | patch -p1
-        if: matrix.tarantool != 'brew' && steps.cache.outputs.cache-hit != 'true'
+          git show 11e87877df9001a4972019328592d79d55d1bb01 | patch -p1 -f
+        if: matrix.tarantool != 'brew' && matrix.tarantool != 'master' && steps.cache.outputs.cache-hit != 'true'
 
       - name: Build tarantool ${{ env.T_VERSION }} from sources
         run: |
