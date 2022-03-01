@@ -6,9 +6,63 @@ local test = tap.test("curl")
 local fiber = require('fiber')
 local socket = require('socket')
 local os = require('os')
+local log = require('log')
 
 test:plan(1)
 mails = fiber.channel(100)
+
+-- {{{ Debugging
+
+-- Wrap socket read/write methods to log data.
+local function wrap_socket(s)
+    local mt = getmetatable(s)
+    if mt.__wrapped then
+        return
+    end
+
+    local function prettify(s)
+        if s == nil then
+            return '[nil]'
+        end
+        assert(type(s) == 'string')
+        return s:gsub('\r', '\\r'):gsub('\n', '\\n')
+    end
+
+    local saved_read = mt.__index.read
+    mt.__index.read = function(self, ...)
+        local data = saved_read(self, ...)
+        log.info('DEBUG: READ: ' .. prettify(data))
+        return data
+    end
+
+    local saved_write = mt.__index.write
+    mt.__index.write = function(self, ...)
+        log.info('DEBUG: WRITE: ' .. prettify((...)))
+        return saved_write(self, ...)
+    end
+
+    mt.__wrapped = true
+end
+
+-- Wrap TCP server handler to log connect/disconnect events and
+-- data from read/write.
+local function wrap_server_handler(handler)
+    if os.getenv('DEBUG') == nil then
+        return handler
+    end
+
+    return function(s)
+        log.info('DEBUG: A CLIENT CONNECTED')
+        wrap_socket(s)
+        -- Don't handle raised error, we don't do that in the
+        -- server mock.
+        local message = handler(s)
+        log.info('DEBUG: CLOSING CONNECTION')
+        return message
+    end
+end
+
+-- }}} Debugging
 
 function write_reply_code(s, l)
     if l:find('3xx') then
@@ -71,7 +125,7 @@ local function smtp_h(s)
     end
 end
 
-local server = socket.tcp_server('127.0.0.1', 0, smtp_h)
+local server = socket.tcp_server('127.0.0.1', 0, wrap_server_handler(smtp_h))
 local addr = 'smtp://127.0.0.1:' .. server:name().port
 
 test:test("smtp.client", function(test)
