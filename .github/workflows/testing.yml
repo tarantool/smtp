@@ -3,8 +3,6 @@ name: testing
 on: [push, pull_request]
 
 # TODO: Run testing using luarocks installed module.
-# TODO: Use caching of fixed tarantool versions or improve
-#       setup-tarantool to use it here.
 
 jobs:
   testing_linux:
@@ -63,52 +61,20 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
-      - name: Export T_* environment variables
+      - name: Export T_VERSION environment variable
         run: |
-          # Split ${{ matrix.tarantool }}.
+          # Extract the part after '/'.
           T="${{ matrix.tarantool }}"
-          T_KIND="${T%%/*}"
           T_VERSION="${T##*/}"
-          if [ "${T_KIND}" = release ]; then
-              T_SERIES="${T_VERSION%.*}"
-          else
-              T_SERIES="${T_VERSION}"
-          fi
 
-          # Make the variables available for the next steps.
-          printf '%s=%s\n' T_KIND    "${T_KIND}"    >> "${GITHUB_ENV}"
+          # Make the variable available for the next steps.
           printf '%s=%s\n' T_VERSION "${T_VERSION}" >> "${GITHUB_ENV}"
-          printf '%s=%s\n' T_SERIES  "${T_SERIES}"  >> "${GITHUB_ENV}"
-
-      - name: Setup tarantool ${{ env.T_SERIES }} repository
-        run: |
-          URL="https://tarantool.io/${T_KIND}/${T_SERIES}/installer.sh"
-          curl -fsSL "${URL}" > installer.sh
-          chmod a+x installer.sh
-          sudo ./installer.sh
 
       - name: Install tarantool ${{ matrix.tarantool }}
-        run: |
-          # Install tarantool.
-          #
-          # We don't use tarantool/setup-tarantool GitHub Action
-          # at the moment due to several reasons:
-          #
-          # 1. No way to install a non-last tarantool version from
-          #    a repository:
-          #    https://github.com/tarantool/setup-tarantool/issues/15
-          # 2. No way to install a live package:
-          #    https://github.com/tarantool/setup-tarantool/issues/9
-          # 3. We likely will install tarantool in a container
-          #    job and it'll require support from the action side:
-          #    https://github.com/tarantool/setup-tarantool/issues/11
-          sudo apt-get install -y "tarantool=${T_VERSION}*" "tarantool-dev=${T_VERSION}*"
-
-      - name: Verify tarantool version
-        run: |
-          # Workaround https://github.com/tarantool/tarantool/issues/4983
-          # Workaround https://github.com/tarantool/tarantool/issues/5040
-          tarantool -e "require('fiber').sleep(0) assert(_TARANTOOL:startswith('${T_VERSION}'), _TARANTOOL) os.exit()"
+        uses: tarantool/setup-tarantool@v1
+        with:
+          tarantool-version: '${{ env.T_VERSION }}'
+          nightly-build: ${{ startsWith(matrix.tarantool, 'live/') }}
 
       - name: Install build dependencies for the module
         run: sudo apt-get install -y libcurl4-openssl-dev
