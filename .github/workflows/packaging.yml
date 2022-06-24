@@ -92,6 +92,29 @@ jobs:
     runs-on: ubuntu-latest
     container: ${{ format('{0}:{1}', matrix.platform.os, matrix.platform.dist) }}
     steps:
+      # {{{ Distibution specific quirks
+
+      - name: Use vault.centos.org repositories on CentOS 8
+        run: |
+          # CentOS 8 reaches EOL 31 December 2021.
+          #
+          # The repositories that are configured in the container
+          # are not working anymore. Use vault.centos.org package
+          # archive instead.
+          #
+          # Related links:
+          #
+          # [1]: https://github.com/CentOS/sig-cloud-instance-images/issues/190
+          # [2]: https://bugs.centos.org/view.php?id=18394
+          # [3]: https://github.com/packpack/packpack-docker-images/pull/87
+          # [4]: https://github.com/tarantool/smtp/issues/60
+          find /etc/yum.repos.d/ -type f -exec sed -i 's/mirrorlist=/#mirrorlist=/g' {} +
+          find /etc/yum.repos.d/ -type f -exec sed -i 's/#baseurl=/baseurl=/g' {} +
+          find /etc/yum.repos.d/ -type f -exec sed -i 's/mirror.centos.org/vault.centos.org/g' {} +
+        if: matrix.platform.os == 'centos' && matrix.platform.dist == 8
+
+      # }}} Distibution specific quirks
+
       # {{{ Install tarantool
 
       - name: Export T_* environment variables
