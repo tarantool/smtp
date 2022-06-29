@@ -78,7 +78,18 @@ jobs:
           nightly-build: ${{ startsWith(matrix.tarantool, 'live/') }}
 
       - name: Install build dependencies for the module
-        run: sudo apt-get install -y libcurl4-openssl-dev
+        run: |
+          # If setup-tarantool action above get tarantool from the
+          # cache, the runner may have old repository metadata.
+          #
+          # We can meet the situation, when the old metadata
+          # contains libcurl4-openssl-dev of version X, but
+          # the mirror has only newer version Y (older ones
+          # are pruned).
+          #
+          # Update the metadata to don't step into the problem.
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev
         if: '!matrix.dont_install_system_libcurl_header'
 
       - name: Inject an error into system's curl/curl.h
