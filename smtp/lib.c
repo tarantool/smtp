@@ -188,6 +188,7 @@ luaT_smtpc_request(lua_State *L)
 	lua_pop(L, 1);
 
 	if (smtpc_execute(req, timeout) != 0) {
+		smtpc_request_delete(req);
 		return luaT_error(L);
 	}
 

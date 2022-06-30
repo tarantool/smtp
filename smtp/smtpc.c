@@ -448,7 +448,6 @@ smtpc_execute(struct smtpc_request *req, double timeout)
 		box_error_set(__FILE__, __LINE__, ER_MEMORY_ISSUE,
 			      "Curl internal memory issue");
 		++env->stat.failed_requests;
-		smtpc_request_delete(req);
 		return -1;
 	case CURLE_SEND_ERROR:
 	case CURLE_RECV_ERROR:
@@ -472,7 +471,6 @@ smtpc_execute(struct smtpc_request *req, double timeout)
 		snprintf(error_msg, sizeof(error_msg), "CURL error %i (os errno %li)", req->code, longval);
 		box_error_set(__FILE__, __LINE__, ER_UNKNOWN, error_msg);
 		++env->stat.failed_requests;
-		smtpc_request_delete(req);
 		return -1;
 	}
 	}
