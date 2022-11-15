@@ -29,3 +29,7 @@ CTestTestfile.cmake
 .*.sw[a-z]
 .history
 .vscode
+
+# The Finder application on macOS generates .DS_Store files with directory
+# metainformation.
+.DS_Store
