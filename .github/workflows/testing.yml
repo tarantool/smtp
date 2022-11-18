@@ -121,7 +121,6 @@ jobs:
       fail-fast: false
       matrix:
         runs-on:
-          - macos-10.15
           - macos-11.0
         tarantool:
           - brew
