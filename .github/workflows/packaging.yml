@@ -16,9 +16,12 @@ jobs:
         platform:
           - {os: debian, dist: bullseye}
           - {os: ubuntu, dist: focal}
+          - {os: ubuntu, dist: jammy}
           - {os: centos, dist: 7}
           - {os: centos, dist: 8}
           - {os: fedora, dist: 34}
+          - {os: fedora, dist: 35}
+          - {os: fedora, dist: 36}
 
     runs-on: ubuntu-latest
     steps:
@@ -63,9 +66,12 @@ jobs:
         platform:
           - {os: debian, dist: bullseye}
           - {os: ubuntu, dist: focal}
+          - {os: ubuntu, dist: jammy}
           - {os: centos, dist: 7}
           - {os: centos, dist: 8}
           - {os: fedora, dist: 34}
+          - {os: fedora, dist: 35}
+          - {os: fedora, dist: 36}
         tarantool:
           # Verify on oldest and newest tarantool versions.
           #
@@ -74,13 +80,19 @@ jobs:
           # executable and when the module falls back to the
           # system libcurl.
           - release/1.10.7
-          - live/2.9
+          - release/2.10.0
         exclude:
           # Tarantool 1.10.7 release is not supported on
-          # debian:bullseye and fedora:34.
+          # debian:bullseye, ubuntu:jammy and fedora:34,35,36.
           - platform: {os: debian, dist: bullseye}
             tarantool: release/1.10.7
+          - platform: {os: ubuntu, dist: jammy}
+            tarantool: release/1.10.7
           - platform: {os: fedora, dist: 34}
+            tarantool: release/1.10.7
+          - platform: {os: fedora, dist: 35}
+            tarantool: release/1.10.7
+          - platform: {os: fedora, dist: 36}
             tarantool: release/1.10.7
 
     env:
@@ -125,6 +137,9 @@ jobs:
           T_VERSION="${T##*/}"
           if [ "${T_KIND}" = release ]; then
               T_SERIES="${T_VERSION%.*}"
+              if [ "${T_SERIES}" = "2.10" ]; then
+                  T_SERIES="2"
+              fi
           else
               T_SERIES="${T_VERSION}"
           fi
