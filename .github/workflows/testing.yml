@@ -141,6 +141,7 @@ jobs:
           - 2.7.1
           - 2.7.2
           - 2.8.1
+          - 2.10.0
           - master
 
     env:
@@ -201,7 +202,10 @@ jobs:
           # These steps fix the problem with tarantool build described in
           # https://github.com/tarantool/tarantool/issues/6576
           git show 11e87877df9001a4972019328592d79d55d1bb01 | patch -p1 -f
-        if: matrix.tarantool != 'brew' && matrix.tarantool != 'master' && steps.cache.outputs.cache-hit != 'true'
+        if: matrix.tarantool != 'brew' &&
+            matrix.tarantool != 'master' &&
+            matrix.tarantool != '2.10.0' &&
+            steps.cache.outputs.cache-hit != 'true'
 
       - name: Build tarantool ${{ env.T_VERSION }} from sources
         run: |
@@ -216,6 +220,7 @@ jobs:
           # Set OpenSSL root directory for linking tarantool with OpenSSL of version 1.1
           # This is related to #49. There are too much deprecations which affect the build and tests.
           # Must be revisited after fixing https://github.com/tarantool/tarantool/issues/6477
+          # (it was fixed in 1.10.14 and 2.10.1).
           cmake . -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOPENSSL_ROOT_DIR=/usr/local/opt/openssl@1.1 -DOPENSSL_LIBRARIES=/usr/local/opt/openssl@1.1/lib
 
           # {{{ Workaround Mac OS build failure (gh-6076)
