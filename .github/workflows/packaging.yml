@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Clone the module
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           # fetch-depth is 1 by default and it is okay for
           # building from a tag. However it is convenient to
@@ -34,7 +34,7 @@ jobs:
           fetch-depth: 0
 
       - name: Clone packpack
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: packpack/packpack
           path: packpack
@@ -45,7 +45,7 @@ jobs:
           export DIST=${{ matrix.platform.dist }}
           ./packpack/packpack
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: ${{ format('{0}-{1}', matrix.platform.os, matrix.platform.dist) }}
           path: build
@@ -179,7 +179,7 @@ jobs:
       # }}} Install tarantool
 
       - name: Download the module package
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: ${{ format('{0}-{1}', matrix.platform.os, matrix.platform.dist) }}
 
@@ -206,7 +206,7 @@ jobs:
         if: matrix.platform.os == 'debian' || matrix.platform.os == 'ubuntu'
 
       - name: Clone the module
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Run tests
         run: |
