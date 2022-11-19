@@ -72,7 +72,7 @@ jobs:
           printf '%s=%s\n' T_VERSION "${T_VERSION}" >> "${GITHUB_ENV}"
 
       - name: Install tarantool ${{ matrix.tarantool }}
-        uses: tarantool/setup-tarantool@v1
+        uses: tarantool/setup-tarantool@v2
         with:
           tarantool-version: '${{ env.T_VERSION }}'
           nightly-build: ${{ startsWith(matrix.tarantool, 'live/') }}
@@ -101,7 +101,7 @@ jobs:
         if: matrix.break_system_libcurl_header
 
       - name: Clone the module
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Build the module
         run: cmake . && make
@@ -161,7 +161,7 @@ jobs:
         if: matrix.tarantool == 'brew'
 
       - name: Cache built tarantool ${{ env.T_VERSION }}
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         id: cache
         with:
           path: ${{ env.T_DESTDIR }}
@@ -184,7 +184,7 @@ jobs:
         if: matrix.tarantool != 'brew' && steps.cache.outputs.cache-hit != 'true'
 
       - name: Clone tarantool ${{ env.T_VERSION }}
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: tarantool/tarantool
           ref: ${{ env.T_VERSION }}
@@ -270,7 +270,7 @@ jobs:
         if: matrix.tarantool != 'brew' && matrix.tarantool != 'master'
 
       - name: Clone the module
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           path: ${{ env.SRCDIR }}
 
