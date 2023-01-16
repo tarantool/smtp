@@ -271,4 +271,16 @@ smtpc_execute(struct smtpc_request *req, double timeout);
 
 /** Request }}} */
 
+/* {{{ Version */
+
+/**
+ * Get a Curl library version.
+ *
+ * @see https://curl.se/libcurl/c/curl_version_info.html
+ */
+void
+smtpc_get_curl_version(unsigned int *major, unsigned int *minor, unsigned int *patch);
+
+/* Version }}} */
+
 #endif /* TARANTOOL_SMTPC_H_INCLUDED */
