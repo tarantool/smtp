@@ -1,13 +1,40 @@
 #!/usr/bin/env tarantool
 
 local tap = require('tap')
-local client = require('smtp').new()
 local test = tap.test("curl")
+local smtp = require('smtp')
 local fiber = require('fiber')
 local socket = require('socket')
 local os = require('os')
 local log = require('log')
 
+local client = smtp.new()
+
+local SEMVER_RE = '(%d+)%.(%d+)%.(%d+)'
+
+local function curl_version()
+    local curl_version_str = smtp._CURL_VERSION
+    local major, minor, patch = string.match(curl_version_str, SEMVER_RE)
+    return tonumber(major), tonumber(minor), tonumber(patch)
+end
+
+-- Whether current curl version is greater or equal to the provided one.
+local function is_curl_version_ge(maj, min, patch)
+    local cur_maj, cur_min, cur_patch = curl_version()
+
+    if cur_maj < maj then return false end
+    if cur_maj > maj then return true end
+
+    if cur_min < min then return false end
+    if cur_min > min then return true end
+
+    if cur_patch < patch then return false end
+    if cur_patch > patch then return true end
+
+    return true
+end
+
+test:diag(string.format('libcurl version: %s', smtp._CURL_VERSION))
 test:plan(1)
 local mails = fiber.channel(100)
 
