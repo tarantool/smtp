@@ -268,7 +268,11 @@ test:test("smtp.client", function(test)
     r = client:request(addr, 'breakconnect@tarantool.org',
                        'receiver@tarantool.org',
                        'mail.body')
-    test:is(r.reason, 'response reading failed', 'unexpected response code')
+    local expected_reason = 'response reading failed'
+    if is_curl_version_ge(7, 86, 0) == true then
+        expected_reason = 'response reading failed (errno: 115)'
+    end
+    test:is(r.reason, expected_reason, 'unexpected response code')
     test:is(r.status, -1, 'expected code')
 
     r = client:request(addr, 'sender@tarantool.org',
@@ -292,7 +296,11 @@ test:test("smtp.client", function(test)
     r = client:request(addr, 'sender@tarantool.org',
                        'breakconnect@tarantool.org',
                        'mail.body')
-    test:is(r.reason, 'response reading failed', 'unexpected response code')
+    local expected_reason = 'response reading failed'
+    if is_curl_version_ge(7, 86, 0) == true then
+        expected_reason = 'response reading failed (errno: 115)'
+    end
+    test:is(r.reason, expected_reason, 'unexpected response code')
     test:is(r.status, -1, 'expected code')
 
 end)
