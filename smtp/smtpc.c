@@ -150,6 +150,15 @@ bind_libcurl_functions(const char *libname, void *libcurl_handle)
 
 #undef load_func
 
+void
+smtpc_get_curl_version(unsigned int *major, unsigned int *minor, unsigned int *patch)
+{
+	curl_version_info_data *info = curl_version_info(CURLVERSION_NOW);
+	*major = (info->version_num >> 16) & 0xff;
+	*minor = (info->version_num >> 8) & 0xff;
+	*patch = info->version_num & 0xff;
+}
+
 int
 smtpc_init(void)
 {

@@ -255,6 +255,15 @@ luaT_smtpc_cleanup(lua_State *L)
 	return 2;
 }
 
+static int
+luaT_smtpc_version(lua_State *L)
+{
+	unsigned int major, minor, patch;
+	smtpc_get_curl_version(&major, &minor, &patch);
+	lua_pushfstring(L, "%u.%u.%u", major, minor, patch);
+	return 1;
+}
+
 /*
  * }}}
  */
@@ -292,6 +301,11 @@ luaopen_smtp_lib(lua_State *L)
 	luaL_register(L, NULL, Client);
 	lua_pop(L, 1);
 	luaL_register(L, "smtp.client.driver", Module);
+
+	lua_pushliteral(L, "_CURL_VERSION");
+	luaT_smtpc_version(L);
+	lua_rawset(L, -3);
+
 	return 1;
 }
 
