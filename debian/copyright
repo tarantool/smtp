@@ -5,7 +5,7 @@ Upstream-Contact: roman@tarantool.org
 Source: https://github.com/tarantool/modulekit
 
 Files: *
-Copyright: 2015 by Roman Tsisyk <roman@tarantool.org>
+Copyright: 2023 by Tarantool AUTHORS
 License: BSD-2-Clause
  Redistribution and use in source and binary forms, with or
  without modification, are permitted provided that the following
