@@ -155,6 +155,8 @@ smtpc_request_delete(struct smtpc_request *req);
  * @brief Add recipient to the request
  * @param req - reference to object
  * @param @recipient - a mail recipient
+ * @retval 0 on success
+ * @retval -1 on error
  */
 int
 smtpc_add_recipient(struct smtpc_request *req, const char *recipient);
@@ -164,6 +166,8 @@ smtpc_add_recipient(struct smtpc_request *req, const char *recipient);
  * @param req request
  * @param body body
  * @param bytes sizeof body
+ * @retval 0 on success
+ * @retval -1 on error, check diag
  */
 int
 smtpc_set_body(struct smtpc_request *req, const char *body, size_t size);
