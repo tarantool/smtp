@@ -29,7 +29,6 @@
 --  SUCH DAMAGE.
 --
 
-local fiber = require('fiber')
 local driver = require('smtp.lib')
 local digest = require('digest')
 
