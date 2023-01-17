@@ -467,8 +467,12 @@ smtpc_execute(struct smtpc_request *req, double timeout)
 		 * leads to a message about failed response reading but
 		 * response code stays 250, that is not correct. See
 		 * https://github.com/curl/curl/issues/8356
+		 *
+		 * NOTE: An error message could contain an errno,
+		 * so we comparing start bytes only.
 		 */
-		if (strcmp(req->error_buf, "response reading failed") == 0) {
+		const char msg_prefix[] = "response reading failed";
+		if (strncmp(req->error_buf, msg_prefix, sizeof(msg_prefix) - 1) == 0) {
 			req->status = -1;
 		}
 		req->reason = req->error_buf;
