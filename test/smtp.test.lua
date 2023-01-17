@@ -9,7 +9,7 @@ local os = require('os')
 local log = require('log')
 
 test:plan(1)
-mails = fiber.channel(100)
+local mails = fiber.channel(100)
 
 -- {{{ Debugging
 
@@ -64,7 +64,7 @@ end
 
 -- }}} Debugging
 
-function write_reply_code(s, l)
+local function write_reply_code(s, l)
     if l:find('3xx') then
         s:write('354 Start mail input\r\n')
     elseif l:find('4xx') then
