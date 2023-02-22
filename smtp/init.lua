@@ -277,7 +277,11 @@ curl_mt = {
 --
 -- Export
 --
-local this_module = { new = smtp_new, _CURL_VERSION = driver._CURL_VERSION }
+local this_module = {
+    new = smtp_new,
+    _CURL_VERSION = driver._CURL_VERSION,
+    _VERSION = require('smtp.version'),
+}
 
 package.loaded['smtp.client'] = this_module
 return this_module
