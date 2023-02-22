@@ -104,5 +104,5 @@ target_link_libraries(lib ${CMAKE_DL_LIBS})
 set_target_properties(lib PROPERTIES PREFIX "" OUTPUT_NAME "lib")
 
 # Install module
-install(FILES init.lua DESTINATION ${TARANTOOL_INSTALL_LUADIR}/${PROJECT_NAME}/)
+install(FILES init.lua version.lua DESTINATION ${TARANTOOL_INSTALL_LUADIR}/${PROJECT_NAME}/)
 install(TARGETS lib LIBRARY DESTINATION ${TARANTOOL_INSTALL_LIBDIR}/${PROJECT_NAME}/)
