@@ -10,7 +10,7 @@ jobs:
     if: |
       github.event_name == 'push' ||
       github.event.pull_request.head.repo.full_name != github.repository
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Check module version
         # We need this step to run only on push with tag.
@@ -32,18 +32,19 @@ jobs:
       matrix:
         platform:
           - {os: debian, dist: bullseye}
+          - {os: debian, dist: bookworm}
           - {os: ubuntu, dist: focal}
           - {os: ubuntu, dist: jammy}
-          - {os: centos, dist: 7}
+          - {os: ubuntu, dist: noble}
           - {os: centos, dist: 8}
           - {os: fedora, dist: 34}
           - {os: fedora, dist: 35}
           - {os: fedora, dist: 36}
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Clone the module
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # fetch-depth is 1 by default and it is okay for
           # building from a tag. However it is convenient to
@@ -51,7 +52,7 @@ jobs:
           fetch-depth: 0
 
       - name: Clone packpack
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: packpack/packpack
           path: packpack
@@ -62,7 +63,7 @@ jobs:
           export DIST=${{ matrix.platform.dist }}
           ./packpack/packpack
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: ${{ format('{0}-{1}', matrix.platform.os, matrix.platform.dist) }}
           path: build
@@ -82,11 +83,10 @@ jobs:
       matrix:
         platform:
           - {os: debian, dist: bullseye}
-          - {os: ubuntu, dist: focal}
+          - {os: debian, dist: bookworm}
           - {os: ubuntu, dist: jammy}
-          - {os: centos, dist: 7}
+          - {os: ubuntu, dist: noble}
           - {os: centos, dist: 8}
-          - {os: fedora, dist: 34}
           - {os: fedora, dist: 35}
           - {os: fedora, dist: 36}
         tarantool:
@@ -97,15 +97,17 @@ jobs:
           # executable and when the module falls back to the
           # system libcurl.
           - release/1.10.7
-          - release/2.10.0
+          - release/2.11.6
         exclude:
           # Tarantool 1.10.7 release is not supported on
           # debian:bullseye, ubuntu:jammy and fedora:34,35,36.
           - platform: {os: debian, dist: bullseye}
             tarantool: release/1.10.7
+          - platform: {os: debian, dist: bookworm}
+            tarantool: release/1.10.7
           - platform: {os: ubuntu, dist: jammy}
             tarantool: release/1.10.7
-          - platform: {os: fedora, dist: 34}
+          - platform: {os: ubuntu, dist: noble}
             tarantool: release/1.10.7
           - platform: {os: fedora, dist: 35}
             tarantool: release/1.10.7
@@ -118,7 +120,7 @@ jobs:
       # See https://github.com/packpack/packpack/issues/7
       DEBIAN_FRONTEND: noninteractive
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     container: ${{ format('{0}:{1}', matrix.platform.os, matrix.platform.dist) }}
     steps:
       # {{{ Distibution specific quirks
@@ -196,7 +198,7 @@ jobs:
       # }}} Install tarantool
 
       - name: Download the module package
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ format('{0}-{1}', matrix.platform.os, matrix.platform.dist) }}
 
@@ -223,7 +225,7 @@ jobs:
         if: matrix.platform.os == 'debian' || matrix.platform.os == 'ubuntu'
 
       - name: Clone the module
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Run tests
         run: |

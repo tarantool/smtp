@@ -17,41 +17,24 @@ jobs:
       fail-fast: false
       matrix:
         tarantool:
-          - release/1.10.7
-          - release/1.10.8
-          - release/1.10.9
-          - release/1.10.10
-          - release/2.4.1
-          - release/2.4.2
-          - release/2.4.3
-          - release/2.5.1
-          - release/2.5.2
-          - release/2.5.3
-          - release/2.6.1
-          - release/2.6.2
-          - release/2.6.3
-          - release/2.7.1
-          - release/2.7.2
-          - release/2.8.1
-          - release/2.10.0
-          - live/1.10
-          - live/2.6
-          - live/2.7
-          - live/2.8
-          - live/2.9
-        # Add an extra check or modify a system environment
+          - release/1.10.14
+          - release/2.11.6
+          - release/3.2.1
+          - release/3.3.0
+          - release/3.3.1
+      # Add an extra check or modify a system environment
         # on one job.
         include:
           # Applicable for: 2.6.3, 2.7.2+, 2.8.1+, 2.9+ (gh-4559).
           #
           # Verify that system's libcurl headers are not required.
-          - tarantool: live/2.8
+          - tarantool: release/3.2.1
             dont_install_system_libcurl_header: true
           # Applicable for: 2.6.3, 2.7.2+, 2.8.1+, 2.9+ (gh-4559).
           #
           # Verify that tarantool's libcurl headers are preferred
           # when the system provides them too.
-          - tarantool: live/2.9
+          - tarantool: release/3.3.0
             break_system_libcurl_header: true
 
     env:
@@ -60,7 +43,7 @@ jobs:
       # See https://github.com/packpack/packpack/issues/7
       DEBIAN_FRONTEND: noninteractive
 
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Export T_VERSION environment variable
         run: |
@@ -72,7 +55,7 @@ jobs:
           printf '%s=%s\n' T_VERSION "${T_VERSION}" >> "${GITHUB_ENV}"
 
       - name: Install tarantool ${{ matrix.tarantool }}
-        uses: tarantool/setup-tarantool@v2
+        uses: tarantool/setup-tarantool@v3
         with:
           tarantool-version: '${{ env.T_VERSION }}'
           nightly-build: ${{ startsWith(matrix.tarantool, 'live/') }}
@@ -101,7 +84,7 @@ jobs:
         if: matrix.break_system_libcurl_header
 
       - name: Clone the module
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Build the module
         run: cmake . && make
@@ -121,27 +104,12 @@ jobs:
       fail-fast: false
       matrix:
         runs-on:
-          - macos-11
-          - macos-12
+          - macos-13
         tarantool:
           - brew
-          - 1.10.7
-          - 1.10.8
-          - 1.10.9
-          - 1.10.10
-          - 2.4.1
-          - 2.4.2
-          - 2.4.3
-          - 2.5.1
-          - 2.5.2
-          - 2.5.3
-          - 2.6.1
-          - 2.6.2
-          - 2.6.3
-          - 2.7.1
-          - 2.7.2
-          - 2.8.1
-          - 2.10.0
+          - 1.10.15
+          - 2.11.6
+          - 3.3.1
           - master
 
     env:
@@ -161,7 +129,7 @@ jobs:
         if: matrix.tarantool == 'brew'
 
       - name: Cache built tarantool ${{ env.T_VERSION }}
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: cache
         with:
           path: ${{ env.T_DESTDIR }}
@@ -184,7 +152,7 @@ jobs:
         if: matrix.tarantool != 'brew' && steps.cache.outputs.cache-hit != 'true'
 
       - name: Clone tarantool ${{ env.T_VERSION }}
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: tarantool/tarantool
           ref: ${{ env.T_VERSION }}
@@ -195,17 +163,6 @@ jobs:
           # the version list.
           fetch-depth: 0
         if: matrix.tarantool != 'brew' && steps.cache.outputs.cache-hit != 'true'
-
-      - name: Patching tarantool for successful build
-        run: |
-          cd "${T_SRCDIR}"
-          # These steps fix the problem with tarantool build described in
-          # https://github.com/tarantool/tarantool/issues/6576
-          git show 11e87877df9001a4972019328592d79d55d1bb01 | patch -p1 -f
-        if: matrix.tarantool != 'brew' &&
-            matrix.tarantool != 'master' &&
-            matrix.tarantool != '2.10.0' &&
-            steps.cache.outputs.cache-hit != 'true'
 
       - name: Build tarantool ${{ env.T_VERSION }} from sources
         run: |
@@ -270,7 +227,7 @@ jobs:
         if: matrix.tarantool != 'brew' && matrix.tarantool != 'master'
 
       - name: Clone the module
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: ${{ env.SRCDIR }}
 
